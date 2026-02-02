@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>TeknoHaber Lüks</title>
+  <title>Koc Soft Teknoloji</title>
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
@@ -28,7 +28,20 @@
       z-index: 100;
       backdrop-filter: blur(5px);
     }
-    header h1 {
+    header .logo-title {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+    }
+    header .logo-title img {
+      height: 50px;
+      transition: 0.3s;
+    }
+    header .logo-title img:hover {
+      transform: scale(1.05);
+    }
+    header .logo-title h1 {
       font-size: 40px;
       color: #00e5ff;
       letter-spacing: 2px;
@@ -128,7 +141,10 @@
 <body>
 
   <header>
-    <h1>TeknoHaber</h1>
+    <div class="logo-title">
+      <img src="https://via.placeholder.com/150x50/00e5ff/000000?text=Koc+Soft" alt="Koc Soft Logo">
+      <h1>Koc Soft</h1>
+    </div>
     <nav>
       <a href="#">Ana Sayfa</a>
       <a href="#">Haberler</a>
@@ -162,7 +178,7 @@
   </main>
 
   <footer>
-    <p>© 2026 TeknoHaber | Tüm hakları saklıdır</p>
+    <p>© 2026 Koc Soft | Tüm hakları saklıdır</p>
   </footer>
 
 </body>
