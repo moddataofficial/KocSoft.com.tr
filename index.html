@@ -30,12 +30,23 @@
             color: #d4af37; font-size: 20px; cursor: pointer; transition: 0.3s;
         }
         #instructions button:hover { background: #d4af37; color: #000; }
+        #muzzleFlash {
+            position: fixed; top: 50%; left: 50%;
+            width: 80px; height: 80px;
+            background: radial-gradient(circle, yellow, orange, transparent);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 11;
+            opacity: 0; /* Başlangıçta gizli */
+            transition: opacity 0.05s;
+        }
     </style>
 </head>
 <body>
 
     <div id="crosshair"></div>
     <div id="hud">SKOR: <span id="score">0</span></div>
+    <div id="muzzleFlash"></div>
     
     <div id="instructions">
         <h1>KOCSOFT RECON 3D</h1>
@@ -52,24 +63,25 @@
         let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
         let velocity = new THREE.Vector3();
         let direction = new THREE.Vector3();
-        let enemies = []; // Botlar yerine düşmanlar
+        let enemies = [];
         let score = 0;
         const loader = new GLTFLoader();
+        let ak47; // AK-47 modelini tutacak değişken
 
         const instructions = document.getElementById('instructions');
         const startButton = document.getElementById('startButton');
+        const muzzleFlash = document.getElementById('muzzleFlash');
 
         init();
         animate();
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0a0a0a); // Koyu arka plan
+            scene.background = new THREE.Color(0x0a0a0a);
             scene.fog = new THREE.Fog(0x0a0a0a, 0, 50);
 
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             
-            // Işıklar
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
             scene.add(ambientLight);
             const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -78,18 +90,24 @@
 
             controls = new PointerLockControls(camera, document.body);
 
-            startButton.addEventListener('click', () => controls.lock());
+            startButton.addEventListener('click', () => {
+                controls.lock();
+                // Oyunu başlattıktan sonra AK-47'yi kameranın önüne ekle
+                if (ak47) {
+                    camera.add(ak47);
+                    ak47.position.set(0.6, -0.4, -0.8); // Kameraya göre pozisyon (sağ el)
+                    ak47.rotation.set(0, Math.PI, 0); // Kameraya göre dönüş (namlu ileri baksın)
+                }
+            });
             controls.addEventListener('lock', () => instructions.style.display = 'none');
-            controls.addEventListener('unlock', () => instructions.style.display = 'flex'); // Unlocked'da göster
+            controls.addEventListener('unlock', () => instructions.style.display = 'flex');
 
-            // Hareket Kontrolleri
             const onKeyDown = (event) => {
                 switch (event.code) {
                     case 'KeyW': moveForward = true; break;
                     case 'KeyA': moveLeft = true; break;
                     case 'KeyS': moveBackward = true; break;
                     case 'KeyD': moveRight = true; break;
-                    case 'Space': if (camera.position.y <= 1.6) velocity.y += 5; break; // Zıplama
                 }
             };
             const onKeyUp = (event) => {
@@ -103,7 +121,6 @@
             document.addEventListener('keydown', onKeyDown);
             document.addEventListener('keyup', onKeyUp);
 
-            // Ateş Etme
             document.addEventListener('mousedown', () => {
                 if (controls.isLocked) shoot();
             });
@@ -115,26 +132,33 @@
             const floor = new THREE.Mesh(floorGeo, floorMat);
             scene.add(floor);
 
-            // Düşman Robot Modellerini Yükleme (Basit bir robot GLTF modeli kullanıldı)
-            // Bu modeli kendi GitHub Pages'inize veya başka bir CDN'e yüklemeniz gerekebilir
-            // Şu an için hazır, basit bir robot modeli linki kullanıldı
+            // AK-47 Modelini Yükle
+            const ak47ModelPath = 'https://threejs.org/examples/models/gltf/AK47.glb'; // Three.js örneklerinden AK-47
+            loader.load(ak47ModelPath, (gltf) => {
+                ak47 = gltf.scene;
+                ak47.scale.set(0.2, 0.2, 0.2); // Boyutunu ayarla
+                // Başlangıçta sahneye ekleme, sadece oyun başladığında kameraya ekle
+                // scene.add(ak47); // Bu satırı kaldırdık
+            }, undefined, (error) => {
+                console.error('AK-47 modeli yüklenirken hata oluştu:', error);
+            });
+
+            // Düşman Robot Modellerini Yükleme
             const robotModelPath = 'https://cdn.rawgit.com/mrdoob/three.js/r128/examples/models/gltf/RobotExpressive/RobotExpressive.glb';
-            
             loader.load(robotModelPath, (gltf) => {
                 const model = gltf.scene;
-                model.scale.set(0.5, 0.5, 0.5); // Boyutunu ayarla
+                model.scale.set(0.5, 0.5, 0.5);
 
                 for (let i = 0; i < 5; i++) { // 5 adet düşman robot
-                    spawnEnemy(model.clone()); // Her düşman için modelin bir kopyasını kullan
+                    spawnEnemy(model.clone());
                 }
             }, undefined, (error) => {
                 console.error('Robot modeli yüklenirken hata oluştu:', error);
-                // Model yüklenemezse yedek olarak kırmızı küp kullan
                 for (let i = 0; i < 5; i++) { spawnEnemyCube(); }
             });
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setPixelRatio(window.devicePixelRatio); // Pixel oranını ayarla
+            renderer.setPixelRatio(window.devicePixelRatio);
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
         }
@@ -142,13 +166,13 @@
         function spawnEnemy(model) {
             const enemy = model;
             enemy.position.x = (Math.random() - 0.5) * 40;
-            enemy.position.y = 0; // Zeminde durması için
+            enemy.position.y = 0;
             enemy.position.z = (Math.random() - 0.5) * 40;
             scene.add(enemy);
             enemies.push(enemy);
         }
 
-        function spawnEnemyCube() { // Model yüklenemezse yedek küp
+        function spawnEnemyCube() {
             const botGeo = new THREE.BoxGeometry(1, 2, 1);
             const botMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x330000 });
             const bot = new THREE.Mesh(botGeo, botMat);
@@ -160,33 +184,41 @@
         }
 
         function shoot() {
+            // Muzzle Flash efekti
+            muzzleFlash.style.opacity = 1;
+            setTimeout(() => { muzzleFlash.style.opacity = 0; }, 50);
+
+            // Silah tepmesi animasyonu
+            if (ak47) {
+                ak47.rotation.x = -0.1; // Hafif yukarı tepme
+                setTimeout(() => { ak47.rotation.x = 0; }, 100); // Geri yerine dönme
+            }
+
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-            const intersects = raycaster.intersectObjects(enemies);
+            const intersects = raycaster.intersectObjects(enemies, true); // True ile tüm çocuk objelerini kontrol et
 
             if (intersects.length > 0) {
                 const target = intersects[0].object;
                 
-                // Eğer model bir grup ise, ana grubu bulup sil
                 let parentToRemove = target;
                 while (parentToRemove.parent && parentToRemove.parent !== scene) {
                     parentToRemove = parentToRemove.parent;
                 }
                 scene.remove(parentToRemove);
                 
-                enemies = enemies.filter(e => e !== parentToRemove); // Doğru objeyi listeden çıkar
+                enemies = enemies.filter(e => e !== parentToRemove);
 
                 score += 100;
                 document.getElementById('score').innerText = score;
                 
-                // Yeni düşmanı belirli bir süre sonra tekrar spawn et
                 loader.load('https://cdn.rawgit.com/mrdoob/three.js/r128/examples/models/gltf/RobotExpressive/RobotExpressive.glb', (gltf) => {
                     const newModel = gltf.scene;
                     newModel.scale.set(0.5, 0.5, 0.5);
                     spawnEnemy(newModel);
                 }, undefined, (error) => {
                     console.error('Yeni robot modeli yüklenirken hata oluştu:', error);
-                    spawnEnemyCube(); // Model yüklenemezse küp
+                    spawnEnemyCube();
                 });
             }
         }
@@ -195,7 +227,7 @@
             requestAnimationFrame(animate);
 
             if (controls.isLocked) {
-                const delta = 0.05; // Hareket hızı için delta
+                const delta = 0.05;
                 velocity.x -= velocity.x * 10.0 * delta;
                 velocity.z -= velocity.z * 10.0 * delta;
                 
@@ -209,7 +241,6 @@
                 controls.moveRight(-velocity.x * delta);
                 controls.moveForward(-velocity.z * delta);
 
-                // Düşmanların kameraya bakmasını sağla
                 enemies.forEach(enemy => {
                     enemy.lookAt(camera.position);
                 });
