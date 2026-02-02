@@ -3,138 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KocSoft | Premium Yenilenmiş Teknoloji</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>KocSoft | RECON FPS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --gold: #d4af37;
-            --dark-bg: #050505;
-            --card-bg: #111111;
-            --text-color: #f5f5f5;
-            --border: rgba(212, 175, 55, 0.2);
+            --dark: #0a0a0a;
+            --ui-bg: rgba(0, 0, 0, 0.8);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; scroll-behavior: smooth; }
-        body { background-color: var(--dark-bg); color: var(--text-color); font-family: 'Montserrat', sans-serif; }
-
-        /* --- NAVBAR --- */
-        header {
-            background: rgba(0,0,0,0.95); padding: 15px 5%; display: flex; justify-content: space-between;
-            align-items: center; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1000;
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; background: #000;
+            font-family: 'Montserrat', sans-serif;
+            cursor: crosshair; /* İmleci artı işareti yapar */
         }
-        .logo { font-family: 'Cinzel', serif; font-size: 24px; color: var(--gold); text-decoration: none; letter-spacing: 3px; }
-        .nav-links a { color: white; text-decoration: none; margin-left: 20px; font-size: 12px; letter-spacing: 1px; transition: 0.3s; }
-        .nav-links a:hover { color: var(--gold); }
 
-        /* --- HAKKIMIZDA BÖLÜMÜ --- */
-        .about-section { padding: 80px 10%; text-align: center; background: #080808; border-bottom: 1px solid var(--border); }
-        .about-section h2 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 32px; margin-bottom: 20px; }
-        .about-section p { max-width: 800px; margin: 0 auto; color: #aaa; line-height: 1.8; }
-
-        /* --- ÜRÜN PANELİ --- */
-        .container { display: grid; grid-template-columns: 250px 1fr; gap: 30px; padding: 40px 5%; }
-        .sidebar { background: var(--card-bg); padding: 20px; border-radius: 10px; border: 1px solid var(--border); height: fit-content; }
-        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; }
-        .card { background: var(--card-bg); border-radius: 15px; padding: 20px; text-align: center; border: 1px solid #222; transition: 0.4s; position: relative; }
-        .card:hover { border-color: var(--gold); transform: translateY(-5px); }
-        .card img { width: 100%; height: 200px; object-fit: contain; margin-bottom: 15px; }
-        .price { color: var(--gold); font-size: 20px; font-weight: bold; display: block; margin: 10px 0; }
-
-        .btn-order { width: 100%; padding: 10px; background: transparent; border: 1px solid var(--gold); color: var(--gold); cursor: pointer; border-radius: 5px; }
-        .btn-order:hover { background: var(--gold); color: black; }
-
-        /* --- CANLI DESTEK BUTONU --- */
-        .live-support {
-            position: fixed; bottom: 30px; right: 30px; background: var(--gold); color: black;
-            width: 60px; height: 60px; border-radius: 50%; display: flex; justify-content: center;
-            align-items: center; font-size: 24px; cursor: pointer; box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
-            z-index: 1000; transition: 0.3s;
+        /* Oyun Alanı */
+        #game-container {
+            width: 100vw; height: 100vh;
+            background: radial-gradient(circle, #1a1a1a 0%, #000 100%);
+            position: relative;
         }
-        .live-support:hover { transform: scale(1.1); rotate: 10deg; }
 
-        /* --- SİPARİŞ MODAL --- */
-        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); }
-        .modal-content { background: var(--card-bg); margin: 10% auto; padding: 30px; border: 1px solid var(--gold); width: 400px; border-radius: 15px; }
-        .modal input, .modal textarea { width: 100%; padding: 12px; margin-bottom: 15px; background: #1a1a1a; border: 1px solid #333; color: white; border-radius: 5px; }
+        /* Arayüz (HUD) */
+        #hud {
+            position: absolute; top: 20px; left: 20px; right: 20px;
+            display: flex; justify-content: space-between;
+            color: var(--gold); font-family: 'Cinzel', serif;
+            pointer-events: none; z-index: 100;
+        }
 
-        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } .sidebar { display: none; } }
+        .stat-box {
+            background: var(--ui-bg); padding: 10px 20px;
+            border: 1px solid var(--gold); border-radius: 5px;
+            font-size: 20px; letter-spacing: 2px;
+        }
+
+        /* Botlar */
+        .bot {
+            position: absolute;
+            width: 60px; height: 60px;
+            background: url('https://cdn-icons-png.flaticon.com/512/3011/3011270.png'); /* Robot ikonu */
+            background-size: cover;
+            filter: drop-shadow(0 0 10px red);
+            cursor: crosshair;
+            transition: transform 0.1s;
+        }
+
+        .bot:active { transform: scale(0.8); }
+
+        /* Silah Görseli */
+        #weapon {
+            position: absolute; bottom: -20px; right: 10%;
+            width: 400px; pointer-events: none;
+            z-index: 50; transform: rotate(-5deg);
+            transition: transform 0.05s;
+        }
+
+        /* Ateş Efekti */
+        .muzzle-flash {
+            position: absolute; bottom: 250px; right: 25%;
+            width: 100px; height: 100px;
+            background: radial-gradient(circle, yellow, orange, transparent);
+            border-radius: 50%; display: none; z-index: 49;
+        }
+
+        /* Başlat Ekranı */
+        #start-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--dark); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 200;
+        }
+
+        #start-screen h1 { color: var(--gold); font-family: 'Cinzel', serif; font-size: 60px; margin-bottom: 20px; }
+        .start-btn {
+            padding: 15px 40px; border: 2px solid var(--gold); background: none;
+            color: var(--gold); font-size: 20px; cursor: pointer; transition: 0.3s;
+        }
+        .start-btn:hover { background: var(--gold); color: #000; }
     </style>
 </head>
-<body>
+<body onclick="shoot()">
 
-<header>
-    <a href="#" class="logo">KOCSOFT</a>
-    <nav class="nav-links">
-        <a href="#products">Ürünler</a>
-        <a href="#about">Hakkımızda</a>
-        <a href="#" onclick="alert('Destek ekibi şu an meşgul.')">Destek</a>
-    </nav>
-</header>
-
-<section id="about" class="about-section">
-    <h2>KocSoft Hakkında</h2>
-    <p>KocSoft, lüksü teknolojiyle birleştiren Türkiye'nin öncü yenilenmiş cihaz platformudur. Müşterilerimize sadece bir telefon değil, mükemmeliyetle test edilmiş bir dijital deneyim sunuyoruz. Her cihaz uzman ekibimiz tarafından 12 ay garanti ve üstün kalite standartlarıyla hazırlanır.</p>
-</section>
-
-<div class="container" id="products">
-    <aside class="sidebar">
-        <h4 style="color:var(--gold); margin-bottom:15px; font-family:'Cinzel'">Filtrele</h4>
-        <label style="display:block; font-size:12px; margin-bottom:10px;"><input type="checkbox"> iPhone</label>
-        <label style="display:block; font-size:12px; margin-bottom:10px;"><input type="checkbox"> Samsung</label>
-        <label style="display:block; font-size:12px; margin-bottom:10px;"><input type="checkbox"> MacBook</label>
-    </aside>
-
-    <main class="product-grid">
-        <div class="card">
-            <img src="https://www.apple.com/v/iphone/home/bu/images/overview/select/iphone_15_pro__fba5gve9u866_xlarge.jpg" alt="iPhone 15">
-            <h3>iPhone 15 Pro Max</h3>
-            <span class="price">82.499 TL</span>
-            <button class="btn-order" onclick="openModal('iPhone 15 Pro Max')">SİPARİŞ VER</button>
-        </div>
-        <div class="card">
-            <img src="https://images.samsung.com/is/image/samsung/p6pim/tr/2401/gadget/tr-galaxy-s24-s928-sm-s928bztqtur-539311226?wid=450&hei=450&fmt=png-alpha" alt="S24">
-            <h3>Samsung S24 Ultra</h3>
-            <span class="price">68.999 TL</span>
-            <button class="btn-order" onclick="openModal('Samsung S24 Ultra')">SİPARİŞ VER</button>
-        </div>
-        <div class="card">
-            <img src="https://www.apple.com/v/macbook-air/q/images/overview/select/product_tile_mba_13_15__77270p7n7366_xlarge.png" alt="Macbook">
-            <h3>MacBook Air M3</h3>
-            <span class="price">54.200 TL</span>
-            <button class="btn-order" onclick="openModal('MacBook Air M3')">SİPARİŞ VER</button>
-        </div>
-    </main>
-</div>
-
-<div class="live-support" onclick="openSupport()">
-    <i class="fa fa-comments"></i>
-</div>
-
-<div id="orderModal" class="modal">
-    <div class="modal-content">
-        <h2 style="color:var(--gold); margin-bottom:20px; font-family:'Cinzel'">Sipariş Ver</h2>
-        <input type="text" id="selectedProduct" readonly>
-        <input type="text" placeholder="Ad Soyad">
-        <input type="tel" placeholder="Telefon">
-        <textarea placeholder="Adres" rows="3"></textarea>
-        <button class="btn-order" style="background:var(--gold); color:black;" onclick="alert('Sipariş Alındı!')">TAMAMLA</button>
-        <button onclick="closeModal()" style="background:none; border:none; color:gray; cursor:pointer; margin-top:10px; width:100%;">Vazgeç</button>
+    <div id="start-screen">
+        <h1>KOCSOFT RECON</h1>
+        <p style="color: #666; margin-bottom: 30px;">BOTLARI TEMİZLE VE SKORUNU YÜKSELT</p>
+        <button class="start-btn" onclick="startGame()">OPERASYONU BAŞLAT</button>
     </div>
-</div>
 
-<script>
-    function openModal(name) {
-        document.getElementById('orderModal').style.display = 'block';
-        document.getElementById('selectedProduct').value = name;
-    }
-    function closeModal() {
-        document.getElementById('orderModal').style.display = 'none';
-    }
-    function openSupport() {
-        alert("Canlı destek hattına yönlendiriliyorsunuz... Lütfen bekleyiniz.");
-    }
-</script>
+    <div id="game-container">
+        <div id="hud">
+            <div class="stat-box">SKOR: <span id="score">0</span></div>
+            <div class="stat-box">SÜRE: <span id="timer">30</span>s</div>
+        </div>
 
+        <div class="muzzle-flash" id="flash"></div>
+        <img src="https://pngimg.com/d/assault_rifle_PNG10283.png" id="weapon" alt="M4A1">
+    </div>
+
+    <script>
+        let score = 0;
+        let timeLeft = 30;
+        let gameActive = false;
+        const scoreEl = document.getElementById('score');
+        const timerEl = document.getElementById('timer');
+        const flash = document.getElementById('flash');
+        const weapon = document.getElementById('weapon');
+
+        function startGame() {
+            document.getElementById('start-screen').style.display = 'none';
+            gameActive = true;
+            spawnBot();
+            let timerInterval = setInterval(() => {
+                timeLeft--;
+                timerEl.innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function shoot() {
+            if (!gameActive) return;
+
+            // Ateş Efekti ve Silah Tepmesi
+            flash.style.display = 'block';
+            weapon.style.transform = 'translateY(20px) rotate(-10deg)';
+            
+            setTimeout(() => {
+                flash.style.display = 'none';
+                weapon.style.transform = 'translateY(0) rotate(-5deg)';
+            }, 50;
+
+            // Ateş sesi (Tarayıcı izin verirse)
+            // let audio = new Audio('shot.mp3'); audio.play();
+        }
+
+        function spawnBot() {
+            if (!gameActive) return;
+
+            const bot = document.createElement('div');
+            bot.className = 'bot';
+            
+            // Rastgele konum
+            const x = Math.random() * (window.innerWidth - 100);
+            const y = Math.random() * (window.innerHeight - 200);
+            
+            bot.style.left = x + 'px';
+            bot.style.top = y + 'px';
+
+            // Bot vurulma olayı
+            bot.onclick = (e) => {
+                e.stopPropagation(); // Sayfa tıklamasını engelle
+                score += 10;
+                scoreEl.innerText = score;
+                bot.remove();
+                spawnBot(); // Yeni bot çıkar
+            };
+
+            document.getElementById('game-container').appendChild(bot);
+
+            // Bot belirli bir süre sonra kaçsın
+            setTimeout(() => {
+                if (bot.parentElement) {
+                    bot.remove();
+                    spawnBot();
+                }
+            }, 1500);
+        }
+
+        function endGame() {
+            gameActive = false;
+            alert("Operasyon Bitti! Toplam Skorun: " + score);
+            location.reload(); // Oyunu sıfırla
+        }
+    </script>
 </body>
 </html>
