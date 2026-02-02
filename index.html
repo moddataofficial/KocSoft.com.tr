@@ -1,185 +1,114 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <title>Koc Soft Teknoloji</title>
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-    /* Genel ayarlar */
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    body {
-      font-family: 'Poppins', sans-serif;
-      background: linear-gradient(135deg, #0b0c2a, #1b1f4b);
-      color: #fff;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ModData | Premium Experience</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #c5a059;
+            --dark-bg: #0a0a0a;
+            --card-bg: #141414;
+            --text-light: #e0e0e0;
+        }
 
-    /* Header ve Menü */
-    header {
-      position: sticky;
-      top: 0;
-      background: rgba(0, 0, 0, 0.6);
-      padding: 20px 0;
-      text-align: center;
-      z-index: 100;
-      backdrop-filter: blur(5px);
-    }
-    header .logo-title {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 15px;
-    }
-    header .logo-title img {
-      height: 50px;
-      transition: 0.3s;
-    }
-    header .logo-title img:hover {
-      transform: scale(1.05);
-    }
-    header .logo-title h1 {
-      font-size: 40px;
-      color: #00e5ff;
-      letter-spacing: 2px;
-    }
-    nav {
-      margin-top: 10px;
-    }
-    nav a {
-      color: #fff;
-      text-decoration: none;
-      margin: 0 20px;
-      font-weight: 600;
-      transition: 0.3s;
-    }
-    nav a:hover {
-      color: #00e5ff;
-    }
+        body {
+            background-color: var(--dark-bg);
+            color: var(--text-light);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
 
-    /* Ana içerik */
-    main {
-      max-width: 1200px;
-      margin: 50px auto;
-      padding: 0 20px;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 30px;
-    }
+        /* Lüks Arka Plan Efekti */
+        .background-glow {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 50% 50%, #1a1a1a 0%, #0a0a0a 100%);
+            z-index: -1;
+        }
 
-    /* Kartlar */
-    .card {
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 15px;
-      padding: 20px;
-      width: 300px;
-      transition: 0.4s;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    }
-    .card:hover {
-      transform: translateY(-10px);
-      box-shadow: 0 15px 25px rgba(0,0,0,0.5);
-    }
-    .card img {
-      width: 100%;
-      border-radius: 10px;
-      margin-bottom: 15px;
-    }
-    .card h2 {
-      color: #00e5ff;
-      font-size: 22px;
-      margin-bottom: 10px;
-    }
-    .card p {
-      color: #ccc;
-      font-size: 16px;
-      line-height: 1.5;
-    }
-    .card button {
-      margin-top: 15px;
-      padding: 10px 20px;
-      background: linear-gradient(135deg, #00e5ff, #009acd);
-      border: none;
-      border-radius: 8px;
-      color: #fff;
-      font-weight: 600;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-    .card button:hover {
-      background: linear-gradient(135deg, #009acd, #00e5ff);
-      transform: scale(1.05);
-      box-shadow: 0 5px 15px rgba(0,0,0,0.4);
-    }
+        .container {
+            text-align: center;
+            padding: 40px;
+            border: 1px solid rgba(197, 160, 89, 0.2);
+            background: var(--card-bg);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            border-radius: 5px;
+            max-width: 600px;
+            backdrop-filter: blur(10px);
+        }
 
-    /* Footer */
-    footer {
-      text-align: center;
-      padding: 20px;
-      background: rgba(0,0,0,0.6);
-      backdrop-filter: blur(5px);
-      margin-top: 50px;
-    }
-    footer p {
-      color: #ccc;
-      font-size: 14px;
-    }
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 3rem;
+            color: var(--gold);
+            margin-bottom: 10px;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+        }
 
-    /* Responsive */
-    @media(max-width: 1000px) {
-      main {
-        flex-direction: column;
-        align-items: center;
-      }
-    }
-  </style>
+        p {
+            font-weight: 300;
+            letter-spacing: 2px;
+            color: #888;
+            margin-bottom: 30px;
+        }
+
+        .gold-line {
+            width: 50px;
+            height: 2px;
+            background-color: var(--gold);
+            margin: 20px auto;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 35px;
+            border: 1px solid var(--gold);
+            color: var(--gold);
+            text-decoration: none;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            transition: all 0.4s ease;
+            margin-top: 20px;
+        }
+
+        .btn:hover {
+            background-color: var(--gold);
+            color: black;
+            box-shadow: 0 0 20px rgba(197, 160, 89, 0.4);
+            cursor: pointer;
+        }
+
+        /* Küçük bir animasyon */
+        .fade-in {
+            animation: fadeIn 2s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
 <body>
 
-  <header>
-    <div class="logo-title">
-      <<img src="https://dummyimage.com/150x50/00e5ff/000000&text=Koc+Soft" alt="Koc Soft Logo" style="height:50px;">
-      <h1>Koc Soft</h1>
-    </div>
-    <nav>
-      <a href="#">Ana Sayfa</a>
-      <a href="#">Haberler</a>
-      <a href="#">İncelemeler</a>
-      <a href="#">Hakkımızda</a>
-      <a href="#">İletişim</a>
-    </nav>
-  </header>
+    <div class="background-glow"></div>
 
-  <main>
-    <div class="card">
-      <img src="https://via.placeholder.com/300x150/009acd/ffffff?text=Ak%C4%B1ll%C4%B1+Telefon" alt="Haber 1">
-      <h2>Yeni Akıllı Telefon Çıktı!</h2>
-      <p>En yeni model akıllı telefon piyasaya sürüldü. Özellikleri ve fiyatı hakkında detaylar burada.</p>
-      <button onclick="alert('Daha fazla oku: Yeni Akıllı Telefon Çıktı!')">Daha Fazla Oku</button>
+    <div class="container fade-in">
+        <h1>MOD DATA</h1>
+        <div class="gold-line"></div>
+        <p>EXCLUSIVE DIGITAL CONTENT & SOLUTIONS</p>
+        <p style="font-size: 0.9rem; color: #666;">Çok yakında burada lüks bir deneyim başlayacak.</p>
+        <a href="#" class="btn">Keşfet</a>
     </div>
-
-    <div class="card">
-      <img src="https://via.placeholder.com/300x150/009acd/ffffff?text=Yapay+Zeka" alt="Haber 2">
-      <h2>Yapay Zeka Dünyası</h2>
-      <p>AI teknolojilerinde son gelişmeler neler? İşte gündemdeki en yeni haberler.</p>
-      <button onclick="alert('Daha fazla oku: Yapay Zeka Dünyası')">Daha Fazla Oku</button>
-    </div>
-
-    <div class="card">
-      <img src="https://via.placeholder.com/300x150/009acd/ffffff?text=Oyun+İncelemesi" alt="Haber 3">
-      <h2>Yeni Oyun İncelemesi</h2>
-      <p>Popüler oyunun yeni sürümü çıktı! Grafikler, hikaye ve oynanış hakkında detaylar.</p>
-      <button onclick="alert('Daha fazla oku: Yeni Oyun İncelemesi')">Daha Fazla Oku</button>
-    </div>
-  </main>
-
-  <footer>
-    <p>© 2026 Koc Soft | Tüm hakları saklıdır</p>
-  </footer>
 
 </body>
 </html>
