@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>KocSoft | 3D RECON FPS</title>
+    <title>KocSoft | RECON 3D</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Arial', sans-serif; }
         #crosshair {
@@ -19,12 +19,17 @@
             text-shadow: 2px 2px #000; z-index: 10;
         }
         #instructions {
-            position: fixed; top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 20;
             color: #d4af37; text-align: center;
-            background: rgba(0,0,0,0.8); padding: 20px;
-            border: 1px solid #d4af37; cursor: pointer; z-index: 20;
         }
+        #instructions h1 { font-family: 'Cinzel', serif; font-size: 60px; margin-bottom: 20px; }
+        #instructions button {
+            padding: 15px 40px; border: 2px solid #d4af37; background: none;
+            color: #d4af37; font-size: 20px; cursor: pointer; transition: 0.3s;
+        }
+        #instructions button:hover { background: #d4af37; color: #000; }
     </style>
 </head>
 <body>
@@ -33,43 +38,49 @@
     <div id="hud">SKOR: <span id="score">0</span></div>
     
     <div id="instructions">
-        <h1 style="font-family: serif;">KOCSOFT RECON 3D</h1>
-        <p>HAREKET: WASD | ATEŞ: SOL TIK | BAKMALIK: MOUSE</p>
-        <button style="padding: 10px 20px; background: #d4af37; border: none; cursor: pointer; font-weight: bold;">BAŞLAT</button>
+        <h1>KOCSOFT RECON 3D</h1>
+        <p style="color: #ccc; margin-bottom: 30px;">HAREKET: WASD | ATEŞ: SOL TIK | BAKMALIK: MOUSE</p>
+        <button id="startButton">OPERASYONU BAŞLAT</button>
     </div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.132.2';
         import { PointerLockControls } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/controls/PointerLockControls.js';
+        import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/loaders/GLTFLoader.js';
 
         let scene, camera, renderer, controls;
         let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
         let velocity = new THREE.Vector3();
         let direction = new THREE.Vector3();
-        let objects = [];
+        let enemies = []; // Botlar yerine düşmanlar
         let score = 0;
+        const loader = new GLTFLoader();
 
         const instructions = document.getElementById('instructions');
+        const startButton = document.getElementById('startButton');
 
         init();
         animate();
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x050505);
-            scene.fog = new THREE.Fog(0x050505, 0, 50);
+            scene.background = new THREE.Color(0x0a0a0a); // Koyu arka plan
+            scene.fog = new THREE.Fog(0x0a0a0a, 0, 50);
 
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             
-            const light = new THREE.HemisphereLight(0xeeeeee, 0x888888, 0.75);
-            light.position.set(0.5, 1, 0.75);
-            scene.add(light);
+            // Işıklar
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(0, 10, 5);
+            scene.add(directionalLight);
 
             controls = new PointerLockControls(camera, document.body);
 
-            instructions.addEventListener('click', () => controls.lock());
+            startButton.addEventListener('click', () => controls.lock());
             controls.addEventListener('lock', () => instructions.style.display = 'none');
-            controls.addEventListener('unlock', () => instructions.style.display = 'block');
+            controls.addEventListener('unlock', () => instructions.style.display = 'flex'); // Unlocked'da göster
 
             // Hareket Kontrolleri
             const onKeyDown = (event) => {
@@ -78,7 +89,7 @@
                     case 'KeyA': moveLeft = true; break;
                     case 'KeyS': moveBackward = true; break;
                     case 'KeyD': moveRight = true; break;
-                    case 'Space': if (camera.position.y <= 1.6) velocity.y += 5; break;
+                    case 'Space': if (camera.position.y <= 1.6) velocity.y += 5; break; // Zıplama
                 }
             };
             const onKeyUp = (event) => {
@@ -97,24 +108,47 @@
                 if (controls.isLocked) shoot();
             });
 
-            // Zemin (Grid)
-            const floorGeo = new THREE.PlaneGeometry(100, 100, 50, 50);
+            // Zemin
+            const floorGeo = new THREE.PlaneGeometry(100, 100, 10, 10);
             floorGeo.rotateX(-Math.PI / 2);
-            const floorMat = new THREE.MeshBasicMaterial({ color: 0x111111, wireframe: true });
+            const floorMat = new THREE.MeshBasicMaterial({ color: 0x222222, side: THREE.DoubleSide });
             const floor = new THREE.Mesh(floorGeo, floorMat);
             scene.add(floor);
 
-            // Botlar (Kırmızı Küpler)
-            for (let i = 0; i < 15; i++) {
-                spawnBot();
-            }
+            // Düşman Robot Modellerini Yükleme (Basit bir robot GLTF modeli kullanıldı)
+            // Bu modeli kendi GitHub Pages'inize veya başka bir CDN'e yüklemeniz gerekebilir
+            // Şu an için hazır, basit bir robot modeli linki kullanıldı
+            const robotModelPath = 'https://cdn.rawgit.com/mrdoob/three.js/r128/examples/models/gltf/RobotExpressive/RobotExpressive.glb';
+            
+            loader.load(robotModelPath, (gltf) => {
+                const model = gltf.scene;
+                model.scale.set(0.5, 0.5, 0.5); // Boyutunu ayarla
+
+                for (let i = 0; i < 5; i++) { // 5 adet düşman robot
+                    spawnEnemy(model.clone()); // Her düşman için modelin bir kopyasını kullan
+                }
+            }, undefined, (error) => {
+                console.error('Robot modeli yüklenirken hata oluştu:', error);
+                // Model yüklenemezse yedek olarak kırmızı küp kullan
+                for (let i = 0; i < 5; i++) { spawnEnemyCube(); }
+            });
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio); // Pixel oranını ayarla
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
         }
 
-        function spawnBot() {
+        function spawnEnemy(model) {
+            const enemy = model;
+            enemy.position.x = (Math.random() - 0.5) * 40;
+            enemy.position.y = 0; // Zeminde durması için
+            enemy.position.z = (Math.random() - 0.5) * 40;
+            scene.add(enemy);
+            enemies.push(enemy);
+        }
+
+        function spawnEnemyCube() { // Model yüklenemezse yedek küp
             const botGeo = new THREE.BoxGeometry(1, 2, 1);
             const botMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x330000 });
             const bot = new THREE.Mesh(botGeo, botMat);
@@ -122,21 +156,38 @@
             bot.position.y = 1;
             bot.position.z = (Math.random() - 0.5) * 40;
             scene.add(bot);
-            objects.push(bot);
+            enemies.push(bot);
         }
 
         function shoot() {
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-            const intersects = raycaster.intersectObjects(objects);
+            const intersects = raycaster.intersectObjects(enemies);
 
             if (intersects.length > 0) {
                 const target = intersects[0].object;
-                scene.remove(target);
-                objects = objects.filter(o => o !== target);
+                
+                // Eğer model bir grup ise, ana grubu bulup sil
+                let parentToRemove = target;
+                while (parentToRemove.parent && parentToRemove.parent !== scene) {
+                    parentToRemove = parentToRemove.parent;
+                }
+                scene.remove(parentToRemove);
+                
+                enemies = enemies.filter(e => e !== parentToRemove); // Doğru objeyi listeden çıkar
+
                 score += 100;
                 document.getElementById('score').innerText = score;
-                setTimeout(spawnBot, 2000); // 2 saniye sonra yeni bot
+                
+                // Yeni düşmanı belirli bir süre sonra tekrar spawn et
+                loader.load('https://cdn.rawgit.com/mrdoob/three.js/r128/examples/models/gltf/RobotExpressive/RobotExpressive.glb', (gltf) => {
+                    const newModel = gltf.scene;
+                    newModel.scale.set(0.5, 0.5, 0.5);
+                    spawnEnemy(newModel);
+                }, undefined, (error) => {
+                    console.error('Yeni robot modeli yüklenirken hata oluştu:', error);
+                    spawnEnemyCube(); // Model yüklenemezse küp
+                });
             }
         }
 
@@ -144,10 +195,10 @@
             requestAnimationFrame(animate);
 
             if (controls.isLocked) {
-                const delta = 0.15;
+                const delta = 0.05; // Hareket hızı için delta
                 velocity.x -= velocity.x * 10.0 * delta;
                 velocity.z -= velocity.z * 10.0 * delta;
-
+                
                 direction.z = Number(moveForward) - Number(moveBackward);
                 direction.x = Number(moveRight) - Number(moveLeft);
                 direction.normalize();
@@ -157,6 +208,11 @@
 
                 controls.moveRight(-velocity.x * delta);
                 controls.moveForward(-velocity.z * delta);
+
+                // Düşmanların kameraya bakmasını sağla
+                enemies.forEach(enemy => {
+                    enemy.lookAt(camera.position);
+                });
             }
 
             renderer.render(scene, camera);
