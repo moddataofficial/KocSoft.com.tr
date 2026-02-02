@@ -2,43 +2,27 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>KocSoft | RECON 3D</title>
+    <title>KocSoft | RECON 3D AK-47 Edition</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Arial', sans-serif; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Montserrat', sans-serif; }
         #crosshair {
             position: fixed; top: 50%; left: 50%;
-            width: 20px; height: 20px;
-            border: 2px solid rgba(212, 175, 55, 0.8);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none; z-index: 10;
+            width: 10px; height: 10px;
+            border: 2px solid #d4af37; border-radius: 50%;
+            transform: translate(-50%, -50%); pointer-events: none; z-index: 10;
         }
         #hud {
-            position: fixed; bottom: 20px; left: 20px;
-            color: #d4af37; font-size: 24px; font-weight: bold;
-            text-shadow: 2px 2px #000; z-index: 10;
+            position: fixed; top: 20px; left: 20px;
+            color: #d4af37; font-size: 24px; font-weight: bold; z-index: 10;
         }
         #instructions {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 20;
-            color: #d4af37; text-align: center;
+            background: rgba(0,0,0,0.85); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 20; color: #d4af37;
         }
-        #instructions h1 { font-family: 'Cinzel', serif; font-size: 60px; margin-bottom: 20px; }
-        #instructions button {
+        button {
             padding: 15px 40px; border: 2px solid #d4af37; background: none;
-            color: #d4af37; font-size: 20px; cursor: pointer; transition: 0.3s;
-        }
-        #instructions button:hover { background: #d4af37; color: #000; }
-        #muzzleFlash {
-            position: fixed; top: 50%; left: 50%;
-            width: 80px; height: 80px;
-            background: radial-gradient(circle, yellow, orange, transparent);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none; z-index: 11;
-            opacity: 0; /* Başlangıçta gizli */
-            transition: opacity 0.05s;
+            color: #d4af37; font-size: 20px; cursor: pointer; margin-top: 20px;
         }
     </style>
 </head>
@@ -46,206 +30,162 @@
 
     <div id="crosshair"></div>
     <div id="hud">SKOR: <span id="score">0</span></div>
-    <div id="muzzleFlash"></div>
     
     <div id="instructions">
-        <h1>KOCSOFT RECON 3D</h1>
-        <p style="color: #ccc; margin-bottom: 30px;">HAREKET: WASD | ATEŞ: SOL TIK | BAKMALIK: MOUSE</p>
+        <h1 style="font-family: serif; font-size: 50px;">KOCSOFT RECON 3D</h1>
+        <p>HAREKET: WASD | ATEŞ: SOL TIK | DÖNÜŞ: MOUSE</p>
         <button id="startButton">OPERASYONU BAŞLAT</button>
     </div>
 
     <script type="module">
         import * as THREE from 'https://cdn.skypack.dev/three@0.132.2';
         import { PointerLockControls } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/controls/PointerLockControls.js';
-        import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/loaders/GLTFLoader.js';
 
-        let scene, camera, renderer, controls;
+        let scene, camera, renderer, controls, gunGroup;
         let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
         let velocity = new THREE.Vector3();
         let direction = new THREE.Vector3();
         let enemies = [];
         let score = 0;
-        const loader = new GLTFLoader();
-        let ak47; // AK-47 modelini tutacak değişken
-
-        const instructions = document.getElementById('instructions');
-        const startButton = document.getElementById('startButton');
-        const muzzleFlash = document.getElementById('muzzleFlash');
 
         init();
         animate();
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0a0a0a);
-            scene.fog = new THREE.Fog(0x0a0a0a, 0, 50);
+            scene.background = new THREE.Color(0x050505);
+            scene.fog = new THREE.Fog(0x050505, 0, 50);
 
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-            scene.add(ambientLight);
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(0, 10, 5);
-            scene.add(directionalLight);
+            const light = new THREE.HemisphereLight(0xeeeeee, 0x888888, 1);
+            scene.add(light);
 
             controls = new PointerLockControls(camera, document.body);
+            document.getElementById('startButton').addEventListener('click', () => controls.lock());
+            controls.addEventListener('lock', () => document.getElementById('instructions').style.display = 'none');
+            controls.addEventListener('unlock', () => document.getElementById('instructions').style.display = 'flex');
 
-            startButton.addEventListener('click', () => {
-                controls.lock();
-                // Oyunu başlattıktan sonra AK-47'yi kameranın önüne ekle
-                if (ak47) {
-                    camera.add(ak47);
-                    ak47.position.set(0.6, -0.4, -0.8); // Kameraya göre pozisyon (sağ el)
-                    ak47.rotation.set(0, Math.PI, 0); // Kameraya göre dönüş (namlu ileri baksın)
-                }
-            });
-            controls.addEventListener('lock', () => instructions.style.display = 'none');
-            controls.addEventListener('unlock', () => instructions.style.display = 'flex');
+            // --- ÖZEL YAPIM AK-47 (GEOMETRİK) ---
+            gunGroup = new THREE.Group();
+            
+            // Gövde (Ahşap ve Metal karışımı)
+            const bodyGeo = new THREE.BoxGeometry(0.15, 0.2, 0.8);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+            const gunBody = new THREE.Mesh(bodyGeo, bodyMat);
+            gunGroup.add(gunBody);
 
-            const onKeyDown = (event) => {
-                switch (event.code) {
-                    case 'KeyW': moveForward = true; break;
-                    case 'KeyA': moveLeft = true; break;
-                    case 'KeyS': moveBackward = true; break;
-                    case 'KeyD': moveRight = true; break;
-                }
+            // Namlu (Uzun metal)
+            const barrelGeo = new THREE.CylinderGeometry(0.03, 0.03, 1);
+            const barrelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+            const barrel = new THREE.Mesh(barrelGeo, barrelMat);
+            barrel.rotation.x = Math.PI / 2;
+            barrel.position.z = -0.7;
+            gunGroup.add(barrel);
+
+            // Şarjör (Eğimli AK stili)
+            const magGeo = new THREE.BoxGeometry(0.1, 0.4, 0.2);
+            const magMat = new THREE.MeshStandardMaterial({ color: 0x332211 }); // Koyu ahşap rengi
+            const mag = new THREE.Mesh(magGeo, magMat);
+            mag.position.y = -0.25;
+            mag.position.z = -0.1;
+            mag.rotation.x = 0.2;
+            gunGroup.add(mag);
+
+            // Kabza (Tutacak)
+            const gripGeo = new THREE.BoxGeometry(0.1, 0.25, 0.15);
+            const grip = new THREE.Mesh(gripGeo, magMat);
+            grip.position.y = -0.2;
+            grip.position.z = 0.2;
+            gunGroup.add(grip);
+
+            // Silahı Kameranın Önüne Sabitle
+            gunGroup.position.set(0.4, -0.4, -0.5);
+            camera.add(gunGroup);
+            scene.add(camera);
+
+            // --- KONTROLLER ---
+            const onKeyDown = (e) => {
+                if (e.code === 'KeyW') moveForward = true;
+                if (e.code === 'KeyS') moveBackward = true;
+                if (e.code === 'KeyA') moveLeft = true;
+                if (e.code === 'KeyD') moveRight = true;
             };
-            const onKeyUp = (event) => {
-                switch (event.code) {
-                    case 'KeyW': moveForward = false; break;
-                    case 'KeyA': moveLeft = false; break;
-                    case 'KeyS': moveBackward = false; break;
-                    case 'KeyD': moveRight = false; break;
-                }
+            const onKeyUp = (e) => {
+                if (e.code === 'KeyW') moveForward = false;
+                if (e.code === 'KeyS') moveBackward = false;
+                if (e.code === 'KeyA') moveLeft = false;
+                if (e.code === 'KeyD') moveRight = false;
             };
             document.addEventListener('keydown', onKeyDown);
             document.addEventListener('keyup', onKeyUp);
-
-            document.addEventListener('mousedown', () => {
-                if (controls.isLocked) shoot();
-            });
+            document.addEventListener('mousedown', () => { if(controls.isLocked) shoot(); });
 
             // Zemin
-            const floorGeo = new THREE.PlaneGeometry(100, 100, 10, 10);
-            floorGeo.rotateX(-Math.PI / 2);
-            const floorMat = new THREE.MeshBasicMaterial({ color: 0x222222, side: THREE.DoubleSide });
-            const floor = new THREE.Mesh(floorGeo, floorMat);
+            const floor = new THREE.Mesh(
+                new THREE.PlaneGeometry(200, 200),
+                new THREE.MeshStandardMaterial({ color: 0x111111, wireframe: true })
+            );
+            floor.rotation.x = -Math.PI / 2;
             scene.add(floor);
 
-            // AK-47 Modelini Yükle
-            const ak47ModelPath = 'https://threejs.org/examples/models/gltf/AK47.glb'; // Three.js örneklerinden AK-47
-            loader.load(ak47ModelPath, (gltf) => {
-                ak47 = gltf.scene;
-                ak47.scale.set(0.2, 0.2, 0.2); // Boyutunu ayarla
-                // Başlangıçta sahneye ekleme, sadece oyun başladığında kameraya ekle
-                // scene.add(ak47); // Bu satırı kaldırdık
-            }, undefined, (error) => {
-                console.error('AK-47 modeli yüklenirken hata oluştu:', error);
-            });
-
-            // Düşman Robot Modellerini Yükleme
-            const robotModelPath = 'https://cdn.rawgit.com/mrdoob/three.js/r128/examples/models/gltf/RobotExpressive/RobotExpressive.glb';
-            loader.load(robotModelPath, (gltf) => {
-                const model = gltf.scene;
-                model.scale.set(0.5, 0.5, 0.5);
-
-                for (let i = 0; i < 5; i++) { // 5 adet düşman robot
-                    spawnEnemy(model.clone());
-                }
-            }, undefined, (error) => {
-                console.error('Robot modeli yüklenirken hata oluştu:', error);
-                for (let i = 0; i < 5; i++) { spawnEnemyCube(); }
-            });
+            // Başlangıç Düşmanları
+            for(let i=0; i<10; i++) spawnEnemy();
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setPixelRatio(window.devicePixelRatio);
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
         }
 
-        function spawnEnemy(model) {
-            const enemy = model;
-            enemy.position.x = (Math.random() - 0.5) * 40;
-            enemy.position.y = 0;
-            enemy.position.z = (Math.random() - 0.5) * 40;
+        function spawnEnemy() {
+            const enemyGeo = new THREE.BoxGeometry(1, 2, 1);
+            const enemyMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x440000 });
+            const enemy = new THREE.Mesh(enemyGeo, enemyMat);
+            enemy.position.set((Math.random()-0.5)*60, 1, (Math.random()-0.5)*60);
             scene.add(enemy);
             enemies.push(enemy);
         }
 
-        function spawnEnemyCube() {
-            const botGeo = new THREE.BoxGeometry(1, 2, 1);
-            const botMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x330000 });
-            const bot = new THREE.Mesh(botGeo, botMat);
-            bot.position.x = (Math.random() - 0.5) * 40;
-            bot.position.y = 1;
-            bot.position.z = (Math.random() - 0.5) * 40;
-            scene.add(bot);
-            enemies.push(bot);
-        }
-
         function shoot() {
-            // Muzzle Flash efekti
-            muzzleFlash.style.opacity = 1;
-            setTimeout(() => { muzzleFlash.style.opacity = 0; }, 50);
-
-            // Silah tepmesi animasyonu
-            if (ak47) {
-                ak47.rotation.x = -0.1; // Hafif yukarı tepme
-                setTimeout(() => { ak47.rotation.x = 0; }, 100); // Geri yerine dönme
-            }
+            // Silah Tepmesi Animasyonu
+            gunGroup.position.z += 0.1;
+            setTimeout(() => gunGroup.position.z -= 0.1, 50);
 
             const raycaster = new THREE.Raycaster();
-            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-            const intersects = raycaster.intersectObjects(enemies, true); // True ile tüm çocuk objelerini kontrol et
+            raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+            const intersects = raycaster.intersectObjects(enemies);
 
             if (intersects.length > 0) {
                 const target = intersects[0].object;
-                
-                let parentToRemove = target;
-                while (parentToRemove.parent && parentToRemove.parent !== scene) {
-                    parentToRemove = parentToRemove.parent;
-                }
-                scene.remove(parentToRemove);
-                
-                enemies = enemies.filter(e => e !== parentToRemove);
-
+                scene.remove(target);
+                enemies = enemies.filter(e => e !== target);
                 score += 100;
                 document.getElementById('score').innerText = score;
-                
-                loader.load('https://cdn.rawgit.com/mrdoob/three.js/r128/examples/models/gltf/RobotExpressive/RobotExpressive.glb', (gltf) => {
-                    const newModel = gltf.scene;
-                    newModel.scale.set(0.5, 0.5, 0.5);
-                    spawnEnemy(newModel);
-                }, undefined, (error) => {
-                    console.error('Yeni robot modeli yüklenirken hata oluştu:', error);
-                    spawnEnemyCube();
-                });
+                setTimeout(spawnEnemy, 1000);
             }
         }
 
         function animate() {
             requestAnimationFrame(animate);
-
             if (controls.isLocked) {
-                const delta = 0.05;
+                const delta = 0.1;
                 velocity.x -= velocity.x * 10.0 * delta;
                 velocity.z -= velocity.z * 10.0 * delta;
-                
+
                 direction.z = Number(moveForward) - Number(moveBackward);
                 direction.x = Number(moveRight) - Number(moveLeft);
                 direction.normalize();
 
-                if (moveForward || moveBackward) velocity.z -= direction.z * 100.0 * delta;
-                if (moveLeft || moveRight) velocity.x -= direction.x * 100.0 * delta;
+                if (moveForward || moveBackward) velocity.z -= direction.z * 150.0 * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * 150.0 * delta;
 
-                controls.moveRight(-velocity.x * delta);
-                controls.moveForward(-velocity.z * delta);
-
-                enemies.forEach(enemy => {
-                    enemy.lookAt(camera.position);
-                });
+                controls.moveRight(-velocity.x * delta * 0.1);
+                controls.moveForward(-velocity.z * delta * 0.1);
+                
+                // Silahın nefes alma efekti (hafif sallanma)
+                const time = performance.now() * 0.002;
+                gunGroup.position.y = -0.4 + Math.sin(time) * 0.01;
             }
-
             renderer.render(scene, camera);
         }
 
