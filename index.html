@@ -3,366 +3,211 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KocSoft | Premium Telefon Deneyimi</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <title>KocSoft | Lüks Teknoloji Dünyası</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --gold: #c5a059;
-            --dark-bg: #0a0a0a;
-            --card-bg: #141414;
-            --text-light: #e0e0e0;
-            --border-color: rgba(197, 160, 89, 0.2);
-            --hover-shadow: rgba(197, 160, 89, 0.4);
+            --gold: #d4af37;
+            --dark-bg: #050505;
+            --card-bg: #111111;
+            --text-color: #f5f5f5;
         }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             background-color: var(--dark-bg);
-            color: var(--text-light);
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            overflow-x: hidden;
+            color: var(--text-color);
+            font-family: 'Montserrat', sans-serif;
             line-height: 1.6;
         }
 
-        .background-glow {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at 50% 50%, #1a1a1a 0%, #0a0a0a 100%);
-            z-index: -1;
-        }
-
-        .header {
-            background-color: var(--card-bg);
-            padding: 20px 40px;
-            border-bottom: 1px solid var(--border-color);
+        /* Navigasyon */
+        nav {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            position: sticky;
+            padding: 25px 8%;
+            background: rgba(0,0,0,0.9);
+            position: fixed;
+            width: 100%;
             top: 0;
             z-index: 1000;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
         }
 
         .logo {
             font-family: 'Cinzel', serif;
-            font-size: 2rem;
+            font-size: 28px;
             color: var(--gold);
+            letter-spacing: 4px;
             text-decoration: none;
-            letter-spacing: 3px;
+            font-weight: bold;
         }
 
-        .nav a {
-            color: var(--text-light);
+        .nav-links a {
+            color: white;
             text-decoration: none;
             margin-left: 30px;
-            font-size: 1rem;
-            letter-spacing: 1px;
-            transition: color 0.3s ease;
+            font-size: 13px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            transition: 0.3s;
         }
 
-        .nav a:hover {
-            color: var(--gold);
-        }
+        .nav-links a:hover { color: var(--gold); }
 
+        /* Hero Bölümü */
         .hero {
-            position: relative;
-            height: 70vh;
+            height: 80vh;
+            background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), 
+                        url('https://images.unsplash.com/photo-1616348436168-de43ad0db179?auto=format&fit=crop&w=1920&q=80');
+            background-size: cover;
+            background-position: center;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             text-align: center;
-            overflow: hidden;
-            background-image: url('https://images.unsplash.com/photo-1546211842-1296c050d276?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w1MDcxMzJ8MHwxfHNlYXJjaHw3fHxwaG9uZSUyMGx1eHVyeXxlbnwwfHx8fDE3MDkyODkzMDV8MA&ixlib=rb-4.0.3&q=80&w=1080'); /* Lüks telefon görseli */
-            background-size: cover;
-            background-position: center;
-            filter: brightness(0.7); /* Görseli hafifçe karart */
-        }
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); /* Koyu overlay */
-            z-index: 1;
+            padding-top: 100px;
         }
 
-        .hero-content {
-            position: relative;
-            z-index: 2;
-            color: white;
-            padding: 20px;
-        }
-
-        .hero-content h2 {
+        .hero h1 {
             font-family: 'Cinzel', serif;
             font-size: 4rem;
             color: var(--gold);
-            margin-bottom: 15px;
-            letter-spacing: 8px;
-            text-shadow: 0 0 10px rgba(0,0,0,0.7);
-        }
-
-        .hero-content p {
-            font-size: 1.2rem;
-            max-width: 700px;
-            margin: 0 auto 40px auto;
-            color: #ccc;
-            letter-spacing: 1px;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 12px 35px;
-            border: 1px solid var(--gold);
-            color: var(--gold);
-            text-decoration: none;
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            letter-spacing: 2px;
-            transition: all 0.4s ease;
-            background: transparent;
-        }
-
-        .btn:hover {
-            background-color: var(--gold);
-            color: var(--dark-bg);
-            box-shadow: 0 0 20px var(--hover-shadow);
-            cursor: pointer;
-        }
-
-        .section {
-            padding: 80px 40px;
-            text-align: center;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .section h3 {
-            font-family: 'Cinzel', serif;
-            font-size: 2.5rem;
-            color: var(--gold);
             margin-bottom: 20px;
-            letter-spacing: 3px;
-            text-transform: uppercase;
+            letter-spacing: 10px;
         }
 
-        .section p {
-            color: #aaa;
-            margin-bottom: 40px;
-            font-size: 1.1rem;
+        /* Ürünler Bölümü */
+        .products {
+            padding: 80px 8%;
+            text-align: center;
         }
 
-        .products-grid {
+        .section-title {
+            font-family: 'Cinzel', serif;
+            font-size: 32px;
+            color: var(--gold);
+            margin-bottom: 50px;
+            letter-spacing: 5px;
+        }
+
+        .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 40px;
-            margin-top: 50px;
         }
 
         .product-card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            padding: 30px;
-            border-radius: 5px;
-            text-align: left;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: var(--card-bg);
+            padding: 40px;
+            border: 1px solid #222;
+            transition: 0.5s;
+            position: relative;
+            overflow: hidden;
         }
 
         .product-card:hover {
+            border-color: var(--gold);
             transform: translateY(-10px);
-            box-shadow: 0 15px 40px var(--hover-shadow);
         }
 
         .product-card img {
             width: 100%;
-            height: 200px; /* Sabit yükseklik */
-            object-fit: contain; /* Görselin tamamını gösterir */
+            height: 250px;
+            object-fit: contain;
             margin-bottom: 20px;
-            border-bottom: 1px solid rgba(197, 160, 89, 0.1);
-            padding-bottom: 15px;
+            transition: 0.5s;
         }
 
-        .product-card h4 {
+        .product-card h3 {
             font-family: 'Cinzel', serif;
-            font-size: 1.5rem;
-            color: var(--text-light);
             margin-bottom: 10px;
+            letter-spacing: 2px;
         }
 
-        .product-card .price {
+        .price {
             color: var(--gold);
-            font-size: 1.8rem;
-            font-weight: 600;
-            margin-bottom: 15px;
+            font-size: 22px;
+            font-weight: bold;
             display: block;
+            margin-bottom: 20px;
         }
 
-        .product-card .btn {
-            width: 100%;
-            text-align: center;
-            padding: 10px 0;
-            font-size: 0.9rem;
-        }
-
-        .footer {
-            background-color: var(--card-bg);
-            padding: 40px;
-            border-top: 1px solid var(--border-color);
-            text-align: center;
-            color: #666;
-            font-size: 0.9rem;
-            margin-top: 50px;
-        }
-
-        .footer a {
+        .buy-btn {
+            padding: 12px 30px;
+            border: 1px solid var(--gold);
             color: var(--gold);
             text-decoration: none;
-            margin: 0 10px;
+            display: inline-block;
+            transition: 0.3s;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 2px;
         }
 
-        .footer a:hover {
-            text-decoration: underline;
+        .buy-btn:hover {
+            background: var(--gold);
+            color: black;
         }
 
-        /* Responsive Tasarım */
-        @media (max-width: 768px) {
-            .header {
-                flex-direction: column;
-                padding: 15px 20px;
-            }
-            .nav {
-                margin-top: 15px;
-            }
-            .nav a {
-                margin: 0 10px;
-            }
-            .hero-content h2 {
-                font-size: 2.5rem;
-            }
-            .hero-content p {
-                font-size: 1rem;
-            }
-            .section {
-                padding: 50px 20px;
-            }
-            .section h3 {
-                font-size: 2rem;
-            }
-            .products-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Küçük bir animasyon */
-        .fade-in-section {
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 1s ease-out, transform 1s ease-out;
-        }
-        .fade-in-section.is-visible {
-            opacity: 1;
-            transform: translateY(0);
+        footer {
+            padding: 50px;
+            text-align: center;
+            border-top: 1px solid #222;
+            background: #000;
+            color: #555;
+            letter-spacing: 2px;
         }
     </style>
 </head>
 <body>
 
-    <div class="background-glow"></div>
-
-    <header class="header">
-        <a href="#" class="logo">KocSoft</a>
-        <nav class="nav">
-            <a href="#home">Anasayfa</a>
-            <a href="#products">Ürünler</a>
-            <a href="#about">Hakkımızda</a>
-            <a href="#contact">İletişim</a>
-        </nav>
-    </header>
-
-    <section id="home" class="hero">
-        <div class="hero-content fade-in-section">
-            <h2>KocSoft</h2>
-            <p>Teknolojide Lüksün Adresi. En yeni ve en prestijli telefon modelleriyle dijital deneyiminizi zirveye taşıyın.</p>
-            <a href="#products" class="btn">Ürünleri Keşfet</a>
+    <nav>
+        <a href="#" class="logo">KOCSOFT</a>
+        <div class="nav-links">
+            <a href="#">Koleksiyon</a>
+            <a href="#">Hakkımızda</a>
+            <a href="#">İletişim</a>
         </div>
-    </section>
+    </nav>
 
-    <section id="products" class="section fade-in-section">
-        <h3>Öne Çıkan Ürünler</h3>
-        <p>Seçkin koleksiyonumuzdan en çok tercih edilen ve en beğenilen telefonları sizler için bir araya getirdik.</p>
+    <div class="hero">
+        <h1>PREMIUM</h1>
+        <p style="letter-spacing: 5px; color: #ccc;">TEKNOLOJİDE ZİRVEYİ KEŞFEDİN</p>
+    </div>
 
-        <div class="products-grid">
+    <section class="products">
+        <h2 class="section-title">Exclusive Koleksiyon</h2>
+        <div class="grid">
             <div class="product-card">
-                <img src="https://images.unsplash.com/photo-1678170889985-e6a3f5a507a2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w1MDcxMzJ8MHwxfHNlYXJjaHw0fHhpYXZvbWklMjAxNHxlbnwwfHx8fDE3MDkyODk0MTF8MA&ixlib=rb-4.0.3&q=80&w=1080" alt="Xiaomi 14 Ultra">
-                <h4>Xiaomi 14 Ultra</h4>
-                <span class="price">₺34.999</span>
-                <a href="#" class="btn">Detayları Gör</a>
+                <img src="https://images.unsplash.com/photo-1696446701796-da61225697cc?auto=format&fit=crop&w=800&q=80" alt="iPhone 15 Pro">
+                <h3>iPhone 15 Pro Max</h3>
+                <span class="price">89.999 TL</span>
+                <a href="#" class="buy-btn">İncele</a>
             </div>
 
             <div class="product-card">
-                <img src="https://images.unsplash.com/photo-1698263595180-87a3891d45c7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w1MDcxMzJ8MHwxfHNlYXJjaHw3fHxpcGhvbmUlMjAxNSUyMHBybyUyMG1heHxlbnwwfHx8fDE3MDkyODk0MzB8MA&ixlib=rb-4.0.3&q=80&w=1080" alt="iPhone 15 Pro Max">
-                <h4>iPhone 15 Pro Max</h4>
-                <span class="price">₺62.499</span>
-                <a href="#" class="btn">Detayları Gör</a>
+                <img src="https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=800&q=80" alt="S24 Ultra">
+                <h3>Galaxy S24 Ultra</h3>
+                <span class="price">74.999 TL</span>
+                <a href="#" class="buy-btn">İncele</a>
             </div>
 
             <div class="product-card">
-                <img src="https://images.unsplash.com/photo-1695781622353-838b97d195f2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w1MDcxMzJ8MHwxfHNlYXJjaHw4fHxzYW1zdW5nJTIwczI0JTIwdWx0cmF8ZW5wwfHx8fDE3MDkyODk0NTd8MA&ixlib=rb-4.0.3&q=80&w=1080" alt="Samsung S24 Ultra">
-                <h4>Samsung Galaxy S24 Ultra</h4>
-                <span class="price">₺58.999</span>
-                <a href="#" class="btn">Detayları Gör</a>
-            </div>
-
-             <div class="product-card">
-                <img src="https://images.unsplash.com/photo-1697262961726-52c6f62f33c3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w1MDcxMzJ8MHwxfHNlYXJjaHwxfHhvJTIwMjR8ZW5wwfHx8fDE3MDkyODk0NzZ8MA&ixlib=rb-4.0.3&q=80&w=1080" alt="Oppo Find X7 Ultra">
-                <h4>Oppo Find X7 Ultra</h4>
-                <span class="price">₺42.999</span>
-                <a href="#" class="btn">Detayları Gör</a>
+                <img src="https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?auto=format&fit=crop&w=800&q=80" alt="Google Pixel 8">
+                <h3>Google Pixel 8 Pro</h3>
+                <span class="price">52.000 TL</span>
+                <a href="#" class="buy-btn">İncele</a>
             </div>
         </div>
     </section>
 
-    <section id="about" class="section fade-in-section">
-        <h3>KocSoft Hakkında</h3>
-        <p>KocSoft olarak, teknoloji tutkunlarına sadece bir telefon değil, bir yaşam tarzı sunuyoruz. En yeni modelleri, premium deneyimi ve eşsiz müşteri hizmetleri anlayışımızla sektörde fark yaratıyoruz. Her bir ürünümüz, kaliteden ödün vermeyen titiz bir seçimin sonucudur.</p>
-        <a href="#contact" class="btn">Bize Ulaşın</a>
-    </section>
-
-    <section id="contact" class="section fade-in-section">
-        <h3>İletişim</h3>
-        <p>Sorularınız, görüşleriniz veya özel talepleriniz için bize ulaşmaktan çekinmeyin. Ekibimiz en kısa sürede size yardımcı olacaktır.</p>
-        <p>Email: <a href="mailto:info@kocsoft.com" style="color:var(--gold); text-decoration: none;">info@kocsoft.com</a></p>
-        <p>Telefon: +90 5XX XXX XX XX</p>
-    </section>
-
-    <footer class="footer">
-        &copy; 2026 KocSoft. Tüm Hakları Saklıdır. | <a href="#">Gizlilik Politikası</a> | <a href="#">Kullanım Koşulları</a>
+    <footer>
+        &copy; 2024 KOCSOFT EXCLUSIVE. TÜM HAKLARI SAKLIDIR.
     </footer>
-
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const sections = document.querySelectorAll('.fade-in-section');
-
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('is-visible');
-                    } else {
-                        // İsteğe bağlı: scrolled out olduğunda sınıfı kaldırabilirsiniz
-                        // entry.target.classList.remove('is-visible');
-                    }
-                });
-            }, {
-                threshold: 0.1 // %10'u göründüğünde tetikle
-            });
-
-            sections.forEach(section => {
-                observer.observe(section);
-            });
-        });
-    </script>
 
 </body>
 </html>
