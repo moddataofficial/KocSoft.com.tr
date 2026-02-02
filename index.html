@@ -2,42 +2,49 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>TeknoHaber</title>
+  <title>TeknoHaber Lüks</title>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    /* Genel stil ve geçişli arka plan */
-    body {
+    /* Genel ayarlar */
+    * {
+      box-sizing: border-box;
       margin: 0;
-      font-family: 'Arial', sans-serif;
-      background: linear-gradient(135deg, #0d1b2a, #1b263b);
-      color: #ffffff;
+      padding: 0;
+    }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #0b0c2a, #1b1f4b);
+      color: #fff;
     }
 
-    /* Üst Menü */
+    /* Header ve Menü */
     header {
-      background-color: rgba(0,0,0,0.5);
-      padding: 20px;
-      text-align: center;
       position: sticky;
       top: 0;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 20px 0;
+      text-align: center;
       z-index: 100;
+      backdrop-filter: blur(5px);
     }
     header h1 {
-      margin: 0;
-      font-size: 36px;
-      color: #00bfff;
+      font-size: 40px;
+      color: #00e5ff;
+      letter-spacing: 2px;
     }
     nav {
       margin-top: 10px;
     }
     nav a {
-      color: #ffffff;
-      margin: 0 15px;
+      color: #fff;
       text-decoration: none;
-      font-size: 18px;
+      margin: 0 20px;
+      font-weight: 600;
       transition: 0.3s;
     }
     nav a:hover {
-      color: #00bfff;
+      color: #00e5ff;
     }
 
     /* Ana içerik */
@@ -51,52 +58,62 @@
       gap: 30px;
     }
 
-    /* Haber kartları */
+    /* Kartlar */
     .card {
-      background-color: rgba(255, 255, 255, 0.05);
-      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 15px;
       padding: 20px;
       width: 300px;
-      transition: 0.3s;
+      transition: 0.4s;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
     }
     .card:hover {
       transform: translateY(-10px);
-      box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+      box-shadow: 0 15px 25px rgba(0,0,0,0.5);
+    }
+    .card img {
+      width: 100%;
+      border-radius: 10px;
+      margin-bottom: 15px;
     }
     .card h2 {
-      color: #00bfff;
+      color: #00e5ff;
       font-size: 22px;
+      margin-bottom: 10px;
     }
     .card p {
-      color: #cccccc;
+      color: #ccc;
       font-size: 16px;
+      line-height: 1.5;
     }
     .card button {
-      margin-top: 10px;
-      padding: 10px 15px;
-      background-color: #00bfff;
+      margin-top: 15px;
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #00e5ff, #009acd);
       border: none;
-      color: white;
-      border-radius: 5px;
+      border-radius: 8px;
+      color: #fff;
+      font-weight: 600;
       cursor: pointer;
-      font-size: 16px;
       transition: 0.3s;
     }
     .card button:hover {
-      background-color: #009acd;
+      background: linear-gradient(135deg, #009acd, #00e5ff);
+      transform: scale(1.05);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.4);
     }
 
     /* Footer */
     footer {
-      background-color: rgba(0,0,0,0.6);
       text-align: center;
       padding: 20px;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(5px);
       margin-top: 50px;
     }
     footer p {
-      margin: 0;
+      color: #ccc;
       font-size: 14px;
-      color: #cccccc;
     }
 
     /* Responsive */
@@ -123,18 +140,21 @@
 
   <main>
     <div class="card">
+      <img src="https://via.placeholder.com/300x150/009acd/ffffff?text=Ak%C4%B1ll%C4%B1+Telefon" alt="Haber 1">
       <h2>Yeni Akıllı Telefon Çıktı!</h2>
       <p>En yeni model akıllı telefon piyasaya sürüldü. Özellikleri ve fiyatı hakkında detaylar burada.</p>
       <button onclick="alert('Daha fazla oku: Yeni Akıllı Telefon Çıktı!')">Daha Fazla Oku</button>
     </div>
 
     <div class="card">
+      <img src="https://via.placeholder.com/300x150/009acd/ffffff?text=Yapay+Zeka" alt="Haber 2">
       <h2>Yapay Zeka Dünyası</h2>
       <p>AI teknolojilerinde son gelişmeler neler? İşte gündemdeki en yeni haberler.</p>
       <button onclick="alert('Daha fazla oku: Yapay Zeka Dünyası')">Daha Fazla Oku</button>
     </div>
 
     <div class="card">
+      <img src="https://via.placeholder.com/300x150/009acd/ffffff?text=Oyun+İncelemesi" alt="Haber 3">
       <h2>Yeni Oyun İncelemesi</h2>
       <p>Popüler oyunun yeni sürümü çıktı! Grafikler, hikaye ve oynanış hakkında detaylar.</p>
       <button onclick="alert('Daha fazla oku: Yeni Oyun İncelemesi')">Daha Fazla Oku</button>
