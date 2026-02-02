@@ -2,44 +2,148 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>Benim İlk Sitem</title>
+  <title>TeknoHaber</title>
   <style>
+    /* Genel stil ve geçişli arka plan */
     body {
-      background-color: #f0f8ff;  /* sayfa arka planı mavi ton */
-      font-family: Arial, sans-serif; /* yazı tipi */
-      text-align: center; /* ortala */
-      padding-top: 50px; /* üstten boşluk */
+      margin: 0;
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #0d1b2a, #1b263b);
+      color: #ffffff;
     }
-    h1 {
-      color: #ff4500; /* başlık rengi turuncu */
+
+    /* Üst Menü */
+    header {
+      background-color: rgba(0,0,0,0.5);
+      padding: 20px;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
-    p {
-      color: #333333; /* paragraf yazısı gri */
+    header h1 {
+      margin: 0;
+      font-size: 36px;
+      color: #00bfff;
+    }
+    nav {
+      margin-top: 10px;
+    }
+    nav a {
+      color: #ffffff;
+      margin: 0 15px;
+      text-decoration: none;
       font-size: 18px;
+      transition: 0.3s;
     }
-    button {
-      padding: 10px 20px;
+    nav a:hover {
+      color: #00bfff;
+    }
+
+    /* Ana içerik */
+    main {
+      max-width: 1200px;
+      margin: 50px auto;
+      padding: 0 20px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 30px;
+    }
+
+    /* Haber kartları */
+    .card {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      padding: 20px;
+      width: 300px;
+      transition: 0.3s;
+    }
+    .card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+    }
+    .card h2 {
+      color: #00bfff;
+      font-size: 22px;
+    }
+    .card p {
+      color: #cccccc;
       font-size: 16px;
-      background-color: #008CBA;
-      color: white;
+    }
+    .card button {
+      margin-top: 10px;
+      padding: 10px 15px;
+      background-color: #00bfff;
       border: none;
+      color: white;
       border-radius: 5px;
       cursor: pointer;
+      font-size: 16px;
+      transition: 0.3s;
     }
-    button:hover {
-      background-color: #005f73;
+    .card button:hover {
+      background-color: #009acd;
+    }
+
+    /* Footer */
+    footer {
+      background-color: rgba(0,0,0,0.6);
+      text-align: center;
+      padding: 20px;
+      margin-top: 50px;
+    }
+    footer p {
+      margin: 0;
+      font-size: 14px;
+      color: #cccccc;
+    }
+
+    /* Responsive */
+    @media(max-width: 1000px) {
+      main {
+        flex-direction: column;
+        align-items: center;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>Benim İlk Sitem</h1>
-  <p>Butona tıklayın!</p>
-  <button onclick="mesajGoster()">Tıkla Beni!</button>
 
-  <script>
-    function mesajGoster() {
-      alert('Tebrikler! Butona tıkladın 🎉');
-    }
-  </script>
+  <header>
+    <h1>TeknoHaber</h1>
+    <nav>
+      <a href="#">Ana Sayfa</a>
+      <a href="#">Haberler</a>
+      <a href="#">İncelemeler</a>
+      <a href="#">Hakkımızda</a>
+      <a href="#">İletişim</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="card">
+      <h2>Yeni Akıllı Telefon Çıktı!</h2>
+      <p>En yeni model akıllı telefon piyasaya sürüldü. Özellikleri ve fiyatı hakkında detaylar burada.</p>
+      <button onclick="alert('Daha fazla oku: Yeni Akıllı Telefon Çıktı!')">Daha Fazla Oku</button>
+    </div>
+
+    <div class="card">
+      <h2>Yapay Zeka Dünyası</h2>
+      <p>AI teknolojilerinde son gelişmeler neler? İşte gündemdeki en yeni haberler.</p>
+      <button onclick="alert('Daha fazla oku: Yapay Zeka Dünyası')">Daha Fazla Oku</button>
+    </div>
+
+    <div class="card">
+      <h2>Yeni Oyun İncelemesi</h2>
+      <p>Popüler oyunun yeni sürümü çıktı! Grafikler, hikaye ve oynanış hakkında detaylar.</p>
+      <button onclick="alert('Daha fazla oku: Yeni Oyun İncelemesi')">Daha Fazla Oku</button>
+    </div>
+  </main>
+
+  <footer>
+    <p>© 2026 TeknoHaber | Tüm hakları saklıdır</p>
+  </footer>
+
 </body>
 </html>
