@@ -2,183 +2,171 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KocSoft | RECON FPS</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <title>KocSoft | 3D RECON FPS</title>
     <style>
-        :root {
-            --gold: #d4af37;
-            --dark: #0a0a0a;
-            --ui-bg: rgba(0, 0, 0, 0.8);
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Arial', sans-serif; }
+        #crosshair {
+            position: fixed; top: 50%; left: 50%;
+            width: 20px; height: 20px;
+            border: 2px solid rgba(212, 175, 55, 0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 10;
         }
-
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            overflow: hidden; background: #000;
-            font-family: 'Montserrat', sans-serif;
-            cursor: crosshair; /* İmleci artı işareti yapar */
-        }
-
-        /* Oyun Alanı */
-        #game-container {
-            width: 100vw; height: 100vh;
-            background: radial-gradient(circle, #1a1a1a 0%, #000 100%);
-            position: relative;
-        }
-
-        /* Arayüz (HUD) */
         #hud {
-            position: absolute; top: 20px; left: 20px; right: 20px;
-            display: flex; justify-content: space-between;
-            color: var(--gold); font-family: 'Cinzel', serif;
-            pointer-events: none; z-index: 100;
+            position: fixed; bottom: 20px; left: 20px;
+            color: #d4af37; font-size: 24px; font-weight: bold;
+            text-shadow: 2px 2px #000; z-index: 10;
         }
-
-        .stat-box {
-            background: var(--ui-bg); padding: 10px 20px;
-            border: 1px solid var(--gold); border-radius: 5px;
-            font-size: 20px; letter-spacing: 2px;
+        #instructions {
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: #d4af37; text-align: center;
+            background: rgba(0,0,0,0.8); padding: 20px;
+            border: 1px solid #d4af37; cursor: pointer; z-index: 20;
         }
-
-        /* Botlar */
-        .bot {
-            position: absolute;
-            width: 60px; height: 60px;
-            background: url('https://cdn-icons-png.flaticon.com/512/3011/3011270.png'); /* Robot ikonu */
-            background-size: cover;
-            filter: drop-shadow(0 0 10px red);
-            cursor: crosshair;
-            transition: transform 0.1s;
-        }
-
-        .bot:active { transform: scale(0.8); }
-
-        /* Silah Görseli */
-        #weapon {
-            position: absolute; bottom: -20px; right: 10%;
-            width: 400px; pointer-events: none;
-            z-index: 50; transform: rotate(-5deg);
-            transition: transform 0.05s;
-        }
-
-        /* Ateş Efekti */
-        .muzzle-flash {
-            position: absolute; bottom: 250px; right: 25%;
-            width: 100px; height: 100px;
-            background: radial-gradient(circle, yellow, orange, transparent);
-            border-radius: 50%; display: none; z-index: 49;
-        }
-
-        /* Başlat Ekranı */
-        #start-screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--dark); display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 200;
-        }
-
-        #start-screen h1 { color: var(--gold); font-family: 'Cinzel', serif; font-size: 60px; margin-bottom: 20px; }
-        .start-btn {
-            padding: 15px 40px; border: 2px solid var(--gold); background: none;
-            color: var(--gold); font-size: 20px; cursor: pointer; transition: 0.3s;
-        }
-        .start-btn:hover { background: var(--gold); color: #000; }
     </style>
 </head>
-<body onclick="shoot()">
+<body>
 
-    <div id="start-screen">
-        <h1>KOCSOFT RECON</h1>
-        <p style="color: #666; margin-bottom: 30px;">BOTLARI TEMİZLE VE SKORUNU YÜKSELT</p>
-        <button class="start-btn" onclick="startGame()">OPERASYONU BAŞLAT</button>
+    <div id="crosshair"></div>
+    <div id="hud">SKOR: <span id="score">0</span></div>
+    
+    <div id="instructions">
+        <h1 style="font-family: serif;">KOCSOFT RECON 3D</h1>
+        <p>HAREKET: WASD | ATEŞ: SOL TIK | BAKMALIK: MOUSE</p>
+        <button style="padding: 10px 20px; background: #d4af37; border: none; cursor: pointer; font-weight: bold;">BAŞLAT</button>
     </div>
 
-    <div id="game-container">
-        <div id="hud">
-            <div class="stat-box">SKOR: <span id="score">0</span></div>
-            <div class="stat-box">SÜRE: <span id="timer">30</span>s</div>
-        </div>
+    <script type="module">
+        import * as THREE from 'https://cdn.skypack.dev/three@0.132.2';
+        import { PointerLockControls } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/controls/PointerLockControls.js';
 
-        <div class="muzzle-flash" id="flash"></div>
-        <img src="https://pngimg.com/d/assault_rifle_PNG10283.png" id="weapon" alt="M4A1">
-    </div>
-
-    <script>
+        let scene, camera, renderer, controls;
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        let velocity = new THREE.Vector3();
+        let direction = new THREE.Vector3();
+        let objects = [];
         let score = 0;
-        let timeLeft = 30;
-        let gameActive = false;
-        const scoreEl = document.getElementById('score');
-        const timerEl = document.getElementById('timer');
-        const flash = document.getElementById('flash');
-        const weapon = document.getElementById('weapon');
 
-        function startGame() {
-            document.getElementById('start-screen').style.display = 'none';
-            gameActive = true;
-            spawnBot();
-            let timerInterval = setInterval(() => {
-                timeLeft--;
-                timerEl.innerText = timeLeft;
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    endGame();
-                }
-            }, 1000);
-        }
+        const instructions = document.getElementById('instructions');
 
-        function shoot() {
-            if (!gameActive) return;
+        init();
+        animate();
 
-            // Ateş Efekti ve Silah Tepmesi
-            flash.style.display = 'block';
-            weapon.style.transform = 'translateY(20px) rotate(-10deg)';
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050505);
+            scene.fog = new THREE.Fog(0x050505, 0, 50);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             
-            setTimeout(() => {
-                flash.style.display = 'none';
-                weapon.style.transform = 'translateY(0) rotate(-5deg)';
-            }, 50;
+            const light = new THREE.HemisphereLight(0xeeeeee, 0x888888, 0.75);
+            light.position.set(0.5, 1, 0.75);
+            scene.add(light);
 
-            // Ateş sesi (Tarayıcı izin verirse)
-            // let audio = new Audio('shot.mp3'); audio.play();
+            controls = new PointerLockControls(camera, document.body);
+
+            instructions.addEventListener('click', () => controls.lock());
+            controls.addEventListener('lock', () => instructions.style.display = 'none');
+            controls.addEventListener('unlock', () => instructions.style.display = 'block');
+
+            // Hareket Kontrolleri
+            const onKeyDown = (event) => {
+                switch (event.code) {
+                    case 'KeyW': moveForward = true; break;
+                    case 'KeyA': moveLeft = true; break;
+                    case 'KeyS': moveBackward = true; break;
+                    case 'KeyD': moveRight = true; break;
+                    case 'Space': if (camera.position.y <= 1.6) velocity.y += 5; break;
+                }
+            };
+            const onKeyUp = (event) => {
+                switch (event.code) {
+                    case 'KeyW': moveForward = false; break;
+                    case 'KeyA': moveLeft = false; break;
+                    case 'KeyS': moveBackward = false; break;
+                    case 'KeyD': moveRight = false; break;
+                }
+            };
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+
+            // Ateş Etme
+            document.addEventListener('mousedown', () => {
+                if (controls.isLocked) shoot();
+            });
+
+            // Zemin (Grid)
+            const floorGeo = new THREE.PlaneGeometry(100, 100, 50, 50);
+            floorGeo.rotateX(-Math.PI / 2);
+            const floorMat = new THREE.MeshBasicMaterial({ color: 0x111111, wireframe: true });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            scene.add(floor);
+
+            // Botlar (Kırmızı Küpler)
+            for (let i = 0; i < 15; i++) {
+                spawnBot();
+            }
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
         }
 
         function spawnBot() {
-            if (!gameActive) return;
-
-            const bot = document.createElement('div');
-            bot.className = 'bot';
-            
-            // Rastgele konum
-            const x = Math.random() * (window.innerWidth - 100);
-            const y = Math.random() * (window.innerHeight - 200);
-            
-            bot.style.left = x + 'px';
-            bot.style.top = y + 'px';
-
-            // Bot vurulma olayı
-            bot.onclick = (e) => {
-                e.stopPropagation(); // Sayfa tıklamasını engelle
-                score += 10;
-                scoreEl.innerText = score;
-                bot.remove();
-                spawnBot(); // Yeni bot çıkar
-            };
-
-            document.getElementById('game-container').appendChild(bot);
-
-            // Bot belirli bir süre sonra kaçsın
-            setTimeout(() => {
-                if (bot.parentElement) {
-                    bot.remove();
-                    spawnBot();
-                }
-            }, 1500);
+            const botGeo = new THREE.BoxGeometry(1, 2, 1);
+            const botMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x330000 });
+            const bot = new THREE.Mesh(botGeo, botMat);
+            bot.position.x = (Math.random() - 0.5) * 40;
+            bot.position.y = 1;
+            bot.position.z = (Math.random() - 0.5) * 40;
+            scene.add(bot);
+            objects.push(bot);
         }
 
-        function endGame() {
-            gameActive = false;
-            alert("Operasyon Bitti! Toplam Skorun: " + score);
-            location.reload(); // Oyunu sıfırla
+        function shoot() {
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+            const intersects = raycaster.intersectObjects(objects);
+
+            if (intersects.length > 0) {
+                const target = intersects[0].object;
+                scene.remove(target);
+                objects = objects.filter(o => o !== target);
+                score += 100;
+                document.getElementById('score').innerText = score;
+                setTimeout(spawnBot, 2000); // 2 saniye sonra yeni bot
+            }
         }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (controls.isLocked) {
+                const delta = 0.15;
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize();
+
+                if (moveForward || moveBackward) velocity.z -= direction.z * 100.0 * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * 100.0 * delta;
+
+                controls.moveRight(-velocity.x * delta);
+                controls.moveForward(-velocity.z * delta);
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
     </script>
 </body>
 </html>
