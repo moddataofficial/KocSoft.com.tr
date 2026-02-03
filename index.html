@@ -3,210 +3,141 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-<title>Mobil Yarış Oyunu</title>
-
+<title>Mobil Oyun</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:Arial}
-
-#gameWrapper{position:fixed;inset:0}
-canvas{width:100%;height:100%;display:block}
-
-#hud{
-    position:absolute;
-    top:10px;left:10px;
-    color:#fff;
-    font-size:16px;
-    text-shadow:0 0 5px #000;
+html,body{
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#222;
 }
-
-#menu{
-    position:absolute;inset:0;
-    background:#000c;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    color:#fff;
-}
-
-.carSelect img{
-    width:120px;
-    margin:10px;
-    border:3px solid transparent;
-    border-radius:12px;
-}
-.carSelect img.active{border-color:#22c55e}
-
-button{
-    margin-top:20px;
-    padding:15px 40px;
-    font-size:20px;
-    border:none;
-    border-radius:14px;
-    background:#22c55e;
-    color:#fff;
-}
-
-#joystick{
-    position:absolute;
-    bottom:20px;left:20px;
-    width:120px;height:120px;
-    border-radius:50%;
-    background:#ffffff22;
-    touch-action:none;
-}
-
-#stick{
-    position:absolute;
-    inset:35px;
-    background:#fff;
-    border-radius:50%;
+canvas{
+    display:block;
 }
 </style>
 </head>
-
 <body>
 
-<div id="gameWrapper">
-<canvas id="game"></canvas>
-
-<div id="hud"></div>
-
-<div id="menu">
-    <h2>🚗 Araba Seç</h2>
-    <div class="carSelect">
-        <img src="https://i.hizliresim.com/s1x7krz.png" class="active">
-        <img src="https://i.hizliresim.com/7q8g4lm.png">
-    </div>
-    <button onclick="startGame()">BAŞLA</button>
-</div>
-
-<div id="joystick">
-    <div id="stick"></div>
-</div>
-</div>
+<canvas id="c"></canvas>
 
 <script>
-const canvas = document.getElementById("game");
+const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
-const hud = document.getElementById("hud");
-const menu = document.getElementById("menu");
-const joystick = document.getElementById("joystick");
-const stick = document.getElementById("stick");
 
 function resize(){
     canvas.width = innerWidth;
     canvas.height = innerHeight;
 }
-addEventListener("resize",resize);resize();
+resize();
+addEventListener("resize",resize);
 
-/* ================= VERİ ================= */
-let bgY=0, speed=6, score=0, best=localStorage.best||0;
-let lives=3, running=false, dir=0;
+/* OYUNCU */
+const player = {
+    w:50,
+    h:80,
+    x:0,
+    y:0,
+    speed:8
+};
 
-/* ================= ARABA ================= */
-const cars=[
-    "https://i.hizliresim.com/s1x7krz.png",
-    "https://i.hizliresim.com/7q8g4lm.png"
-];
-let carImg=new Image(); carImg.src=cars[0];
-document.querySelectorAll(".carSelect img").forEach((img,i)=>{
-    img.onclick=()=>{
-        document.querySelectorAll(".carSelect img").forEach(x=>x.classList.remove("active"));
-        img.classList.add("active");
-        carImg.src=cars[i];
-    }
+/* ENGELLER */
+let obstacles = [];
+let score = 0;
+let gameOver = false;
+
+/* DOKUNMA */
+let moveLeft=false, moveRight=false;
+
+addEventListener("touchstart",e=>{
+    const x = e.touches[0].clientX;
+    if(x < innerWidth/2) moveLeft=true;
+    else moveRight=true;
 });
 
-const car={w:70,h:140,x:0,y:0};
+addEventListener("touchend",()=>{
+    moveLeft=false;
+    moveRight=false;
+});
 
-/* ================= SES ================= */
-const motor=new Audio("https://assets.mixkit.co/sfx/preview/mixkit-car-engine-loop-1565.mp3");
-motor.loop=true;
-const crash=new Audio("https://assets.mixkit.co/sfx/preview/mixkit-arcade-retro-game-over-213.mp3");
+/* KLAVYE (PC TEST İÇİN) */
+addEventListener("keydown",e=>{
+    if(e.key==="ArrowLeft") moveLeft=true;
+    if(e.key==="ArrowRight") moveRight=true;
+});
+addEventListener("keyup",()=>{
+    moveLeft=false;
+    moveRight=false;
+});
 
-/* ================= ENGELLER ================= */
-let obs=[];
-function spawn(){
+/* BAŞLAT */
+player.x = canvas.width/2 - player.w/2;
+player.y = canvas.height - player.h - 20;
+
+function spawnObstacle(){
     if(Math.random()<0.03){
-        obs.push({
-            x:Math.random()*(canvas.width-120)+60,
-            y:-30,w:60,h:20
+        obstacles.push({
+            x:Math.random()*(canvas.width-40),
+            y:-40,
+            w:40,
+            h:40,
+            speed:6
         });
-        score++;
-        if(score>best){best=score;localStorage.best=best}
     }
 }
 
-/* ================= JOYSTICK ================= */
-let joyActive=false,startX=0;
-joystick.addEventListener("touchstart",e=>{
-    joyActive=true;
-    startX=e.touches[0].clientX;
-});
-joystick.addEventListener("touchmove",e=>{
-    if(!joyActive)return;
-    let dx=e.touches[0].clientX-startX;
-    dir=Math.max(-1,Math.min(1,dx/40));
-    stick.style.transform=`translateX(${dir*20}px)`;
-});
-joystick.addEventListener("touchend",()=>{
-    joyActive=false;dir=0;stick.style.transform="translateX(0)";
-});
-
-/* ================= OYUN ================= */
 function loop(){
-    if(!running)return;
+    if(gameOver){
+        ctx.fillStyle="white";
+        ctx.font="30px Arial";
+        ctx.fillText("GAME OVER",canvas.width/2-90,canvas.height/2);
+        ctx.fillText("Skor: "+score,canvas.width/2-70,canvas.height/2+40);
+        return;
+    }
+
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    bgY+=speed;
-    ctx.fillStyle="#555";
-    ctx.fillRect(0,bgY%canvas.height,canvas.width,canvas.height);
-    ctx.fillRect(0,bgY%canvas.height-canvas.height,canvas.width,canvas.height);
+    /* HAREKET */
+    if(moveLeft) player.x -= player.speed;
+    if(moveRight) player.x += player.speed;
 
-    car.x+=dir*8;
-    car.x=Math.max(10,Math.min(canvas.width-car.w-10,car.x));
+    player.x = Math.max(0,Math.min(canvas.width-player.w,player.x));
 
-    spawn();
-    obs.forEach(o=>o.y+=speed);
-    obs=obs.filter(o=>o.y<canvas.height);
+    /* OYUNCU */
+    ctx.fillStyle="lime";
+    ctx.fillRect(player.x,player.y,player.w,player.h);
 
-    obs.forEach(o=>{
-        ctx.fillStyle="#111";
+    /* ENGELLER */
+    spawnObstacle();
+    obstacles.forEach(o=>{
+        o.y += o.speed;
+        ctx.fillStyle="red";
         ctx.fillRect(o.x,o.y,o.w,o.h);
+
+        /* ÇARPIŞMA */
         if(
-            car.x<o.x+o.w && car.x+car.w>o.x &&
-            car.y<o.y+o.h && car.y+car.h>o.y
+            player.x < o.x+o.w &&
+            player.x+player.w > o.x &&
+            player.y < o.y+o.h &&
+            player.y+player.h > o.y
         ){
-            crash.play();
-            lives--; obs=[];
-            if(lives<=0) end();
+            gameOver=true;
         }
     });
 
-    ctx.drawImage(carImg,car.x,car.y,car.w,car.h);
+    obstacles = obstacles.filter(o=>o.y < canvas.height);
 
-    hud.innerHTML=`🏁 ${score} | ⭐ ${best} | ❤️ ${lives}`;
+    /* SKOR */
+    score++;
+    ctx.fillStyle="white";
+    ctx.font="20px Arial";
+    ctx.fillText("Skor: "+score,20,30);
 
     requestAnimationFrame(loop);
 }
 
-function startGame(){
-    menu.style.display="none";
-    car.x=canvas.width/2-car.w/2;
-    car.y=canvas.height-car.h-30;
-    obs=[];score=0;lives=3;speed=6;
-    running=true;
-    motor.play();
-    loop();
-}
-
-function end(){
-    running=false;
-    motor.pause();
-    menu.style.display="flex";
-}
+loop();
 </script>
 
 </body>
@@ -216,210 +147,141 @@ function end(){
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-<title>Mobil Yarış Oyunu</title>
-
+<title>Mobil Oyun</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:Arial}
-
-#gameWrapper{position:fixed;inset:0}
-canvas{width:100%;height:100%;display:block}
-
-#hud{
-    position:absolute;
-    top:10px;left:10px;
-    color:#fff;
-    font-size:16px;
-    text-shadow:0 0 5px #000;
+html,body{
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#222;
 }
-
-#menu{
-    position:absolute;inset:0;
-    background:#000c;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    color:#fff;
-}
-
-.carSelect img{
-    width:120px;
-    margin:10px;
-    border:3px solid transparent;
-    border-radius:12px;
-}
-.carSelect img.active{border-color:#22c55e}
-
-button{
-    margin-top:20px;
-    padding:15px 40px;
-    font-size:20px;
-    border:none;
-    border-radius:14px;
-    background:#22c55e;
-    color:#fff;
-}
-
-#joystick{
-    position:absolute;
-    bottom:20px;left:20px;
-    width:120px;height:120px;
-    border-radius:50%;
-    background:#ffffff22;
-    touch-action:none;
-}
-
-#stick{
-    position:absolute;
-    inset:35px;
-    background:#fff;
-    border-radius:50%;
+canvas{
+    display:block;
 }
 </style>
 </head>
-
 <body>
 
-<div id="gameWrapper">
-<canvas id="game"></canvas>
-
-<div id="hud"></div>
-
-<div id="menu">
-    <h2>🚗 Araba Seç</h2>
-    <div class="carSelect">
-        <img src="https://i.hizliresim.com/s1x7krz.png" class="active">
-        <img src="https://i.hizliresim.com/7q8g4lm.png">
-    </div>
-    <button onclick="startGame()">BAŞLA</button>
-</div>
-
-<div id="joystick">
-    <div id="stick"></div>
-</div>
-</div>
+<canvas id="c"></canvas>
 
 <script>
-const canvas = document.getElementById("game");
+const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
-const hud = document.getElementById("hud");
-const menu = document.getElementById("menu");
-const joystick = document.getElementById("joystick");
-const stick = document.getElementById("stick");
 
 function resize(){
     canvas.width = innerWidth;
     canvas.height = innerHeight;
 }
-addEventListener("resize",resize);resize();
+resize();
+addEventListener("resize",resize);
 
-/* ================= VERİ ================= */
-let bgY=0, speed=6, score=0, best=localStorage.best||0;
-let lives=3, running=false, dir=0;
+/* OYUNCU */
+const player = {
+    w:50,
+    h:80,
+    x:0,
+    y:0,
+    speed:8
+};
 
-/* ================= ARABA ================= */
-const cars=[
-    "https://i.hizliresim.com/s1x7krz.png",
-    "https://i.hizliresim.com/7q8g4lm.png"
-];
-let carImg=new Image(); carImg.src=cars[0];
-document.querySelectorAll(".carSelect img").forEach((img,i)=>{
-    img.onclick=()=>{
-        document.querySelectorAll(".carSelect img").forEach(x=>x.classList.remove("active"));
-        img.classList.add("active");
-        carImg.src=cars[i];
-    }
+/* ENGELLER */
+let obstacles = [];
+let score = 0;
+let gameOver = false;
+
+/* DOKUNMA */
+let moveLeft=false, moveRight=false;
+
+addEventListener("touchstart",e=>{
+    const x = e.touches[0].clientX;
+    if(x < innerWidth/2) moveLeft=true;
+    else moveRight=true;
 });
 
-const car={w:70,h:140,x:0,y:0};
+addEventListener("touchend",()=>{
+    moveLeft=false;
+    moveRight=false;
+});
 
-/* ================= SES ================= */
-const motor=new Audio("https://assets.mixkit.co/sfx/preview/mixkit-car-engine-loop-1565.mp3");
-motor.loop=true;
-const crash=new Audio("https://assets.mixkit.co/sfx/preview/mixkit-arcade-retro-game-over-213.mp3");
+/* KLAVYE (PC TEST İÇİN) */
+addEventListener("keydown",e=>{
+    if(e.key==="ArrowLeft") moveLeft=true;
+    if(e.key==="ArrowRight") moveRight=true;
+});
+addEventListener("keyup",()=>{
+    moveLeft=false;
+    moveRight=false;
+});
 
-/* ================= ENGELLER ================= */
-let obs=[];
-function spawn(){
+/* BAŞLAT */
+player.x = canvas.width/2 - player.w/2;
+player.y = canvas.height - player.h - 20;
+
+function spawnObstacle(){
     if(Math.random()<0.03){
-        obs.push({
-            x:Math.random()*(canvas.width-120)+60,
-            y:-30,w:60,h:20
+        obstacles.push({
+            x:Math.random()*(canvas.width-40),
+            y:-40,
+            w:40,
+            h:40,
+            speed:6
         });
-        score++;
-        if(score>best){best=score;localStorage.best=best}
     }
 }
 
-/* ================= JOYSTICK ================= */
-let joyActive=false,startX=0;
-joystick.addEventListener("touchstart",e=>{
-    joyActive=true;
-    startX=e.touches[0].clientX;
-});
-joystick.addEventListener("touchmove",e=>{
-    if(!joyActive)return;
-    let dx=e.touches[0].clientX-startX;
-    dir=Math.max(-1,Math.min(1,dx/40));
-    stick.style.transform=`translateX(${dir*20}px)`;
-});
-joystick.addEventListener("touchend",()=>{
-    joyActive=false;dir=0;stick.style.transform="translateX(0)";
-});
-
-/* ================= OYUN ================= */
 function loop(){
-    if(!running)return;
+    if(gameOver){
+        ctx.fillStyle="white";
+        ctx.font="30px Arial";
+        ctx.fillText("GAME OVER",canvas.width/2-90,canvas.height/2);
+        ctx.fillText("Skor: "+score,canvas.width/2-70,canvas.height/2+40);
+        return;
+    }
+
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    bgY+=speed;
-    ctx.fillStyle="#555";
-    ctx.fillRect(0,bgY%canvas.height,canvas.width,canvas.height);
-    ctx.fillRect(0,bgY%canvas.height-canvas.height,canvas.width,canvas.height);
+    /* HAREKET */
+    if(moveLeft) player.x -= player.speed;
+    if(moveRight) player.x += player.speed;
 
-    car.x+=dir*8;
-    car.x=Math.max(10,Math.min(canvas.width-car.w-10,car.x));
+    player.x = Math.max(0,Math.min(canvas.width-player.w,player.x));
 
-    spawn();
-    obs.forEach(o=>o.y+=speed);
-    obs=obs.filter(o=>o.y<canvas.height);
+    /* OYUNCU */
+    ctx.fillStyle="lime";
+    ctx.fillRect(player.x,player.y,player.w,player.h);
 
-    obs.forEach(o=>{
-        ctx.fillStyle="#111";
+    /* ENGELLER */
+    spawnObstacle();
+    obstacles.forEach(o=>{
+        o.y += o.speed;
+        ctx.fillStyle="red";
         ctx.fillRect(o.x,o.y,o.w,o.h);
+
+        /* ÇARPIŞMA */
         if(
-            car.x<o.x+o.w && car.x+car.w>o.x &&
-            car.y<o.y+o.h && car.y+car.h>o.y
+            player.x < o.x+o.w &&
+            player.x+player.w > o.x &&
+            player.y < o.y+o.h &&
+            player.y+player.h > o.y
         ){
-            crash.play();
-            lives--; obs=[];
-            if(lives<=0) end();
+            gameOver=true;
         }
     });
 
-    ctx.drawImage(carImg,car.x,car.y,car.w,car.h);
+    obstacles = obstacles.filter(o=>o.y < canvas.height);
 
-    hud.innerHTML=`🏁 ${score} | ⭐ ${best} | ❤️ ${lives}`;
+    /* SKOR */
+    score++;
+    ctx.fillStyle="white";
+    ctx.font="20px Arial";
+    ctx.fillText("Skor: "+score,20,30);
 
     requestAnimationFrame(loop);
 }
 
-function startGame(){
-    menu.style.display="none";
-    car.x=canvas.width/2-car.w/2;
-    car.y=canvas.height-car.h-30;
-    obs=[];score=0;lives=3;speed=6;
-    running=true;
-    motor.play();
-    loop();
-}
-
-function end(){
-    running=false;
-    motor.pause();
-    menu.style.display="flex";
-}
+loop();
 </script>
 
 </body>
@@ -429,210 +291,141 @@ function end(){
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-<title>Mobil Yarış Oyunu</title>
-
+<title>Mobil Oyun</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:Arial}
-
-#gameWrapper{position:fixed;inset:0}
-canvas{width:100%;height:100%;display:block}
-
-#hud{
-    position:absolute;
-    top:10px;left:10px;
-    color:#fff;
-    font-size:16px;
-    text-shadow:0 0 5px #000;
+html,body{
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#222;
 }
-
-#menu{
-    position:absolute;inset:0;
-    background:#000c;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    color:#fff;
-}
-
-.carSelect img{
-    width:120px;
-    margin:10px;
-    border:3px solid transparent;
-    border-radius:12px;
-}
-.carSelect img.active{border-color:#22c55e}
-
-button{
-    margin-top:20px;
-    padding:15px 40px;
-    font-size:20px;
-    border:none;
-    border-radius:14px;
-    background:#22c55e;
-    color:#fff;
-}
-
-#joystick{
-    position:absolute;
-    bottom:20px;left:20px;
-    width:120px;height:120px;
-    border-radius:50%;
-    background:#ffffff22;
-    touch-action:none;
-}
-
-#stick{
-    position:absolute;
-    inset:35px;
-    background:#fff;
-    border-radius:50%;
+canvas{
+    display:block;
 }
 </style>
 </head>
-
 <body>
 
-<div id="gameWrapper">
-<canvas id="game"></canvas>
-
-<div id="hud"></div>
-
-<div id="menu">
-    <h2>🚗 Araba Seç</h2>
-    <div class="carSelect">
-        <img src="https://i.hizliresim.com/s1x7krz.png" class="active">
-        <img src="https://i.hizliresim.com/7q8g4lm.png">
-    </div>
-    <button onclick="startGame()">BAŞLA</button>
-</div>
-
-<div id="joystick">
-    <div id="stick"></div>
-</div>
-</div>
+<canvas id="c"></canvas>
 
 <script>
-const canvas = document.getElementById("game");
+const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
-const hud = document.getElementById("hud");
-const menu = document.getElementById("menu");
-const joystick = document.getElementById("joystick");
-const stick = document.getElementById("stick");
 
 function resize(){
     canvas.width = innerWidth;
     canvas.height = innerHeight;
 }
-addEventListener("resize",resize);resize();
+resize();
+addEventListener("resize",resize);
 
-/* ================= VERİ ================= */
-let bgY=0, speed=6, score=0, best=localStorage.best||0;
-let lives=3, running=false, dir=0;
+/* OYUNCU */
+const player = {
+    w:50,
+    h:80,
+    x:0,
+    y:0,
+    speed:8
+};
 
-/* ================= ARABA ================= */
-const cars=[
-    "https://i.hizliresim.com/s1x7krz.png",
-    "https://i.hizliresim.com/7q8g4lm.png"
-];
-let carImg=new Image(); carImg.src=cars[0];
-document.querySelectorAll(".carSelect img").forEach((img,i)=>{
-    img.onclick=()=>{
-        document.querySelectorAll(".carSelect img").forEach(x=>x.classList.remove("active"));
-        img.classList.add("active");
-        carImg.src=cars[i];
-    }
+/* ENGELLER */
+let obstacles = [];
+let score = 0;
+let gameOver = false;
+
+/* DOKUNMA */
+let moveLeft=false, moveRight=false;
+
+addEventListener("touchstart",e=>{
+    const x = e.touches[0].clientX;
+    if(x < innerWidth/2) moveLeft=true;
+    else moveRight=true;
 });
 
-const car={w:70,h:140,x:0,y:0};
+addEventListener("touchend",()=>{
+    moveLeft=false;
+    moveRight=false;
+});
 
-/* ================= SES ================= */
-const motor=new Audio("https://assets.mixkit.co/sfx/preview/mixkit-car-engine-loop-1565.mp3");
-motor.loop=true;
-const crash=new Audio("https://assets.mixkit.co/sfx/preview/mixkit-arcade-retro-game-over-213.mp3");
+/* KLAVYE (PC TEST İÇİN) */
+addEventListener("keydown",e=>{
+    if(e.key==="ArrowLeft") moveLeft=true;
+    if(e.key==="ArrowRight") moveRight=true;
+});
+addEventListener("keyup",()=>{
+    moveLeft=false;
+    moveRight=false;
+});
 
-/* ================= ENGELLER ================= */
-let obs=[];
-function spawn(){
+/* BAŞLAT */
+player.x = canvas.width/2 - player.w/2;
+player.y = canvas.height - player.h - 20;
+
+function spawnObstacle(){
     if(Math.random()<0.03){
-        obs.push({
-            x:Math.random()*(canvas.width-120)+60,
-            y:-30,w:60,h:20
+        obstacles.push({
+            x:Math.random()*(canvas.width-40),
+            y:-40,
+            w:40,
+            h:40,
+            speed:6
         });
-        score++;
-        if(score>best){best=score;localStorage.best=best}
     }
 }
 
-/* ================= JOYSTICK ================= */
-let joyActive=false,startX=0;
-joystick.addEventListener("touchstart",e=>{
-    joyActive=true;
-    startX=e.touches[0].clientX;
-});
-joystick.addEventListener("touchmove",e=>{
-    if(!joyActive)return;
-    let dx=e.touches[0].clientX-startX;
-    dir=Math.max(-1,Math.min(1,dx/40));
-    stick.style.transform=`translateX(${dir*20}px)`;
-});
-joystick.addEventListener("touchend",()=>{
-    joyActive=false;dir=0;stick.style.transform="translateX(0)";
-});
-
-/* ================= OYUN ================= */
 function loop(){
-    if(!running)return;
+    if(gameOver){
+        ctx.fillStyle="white";
+        ctx.font="30px Arial";
+        ctx.fillText("GAME OVER",canvas.width/2-90,canvas.height/2);
+        ctx.fillText("Skor: "+score,canvas.width/2-70,canvas.height/2+40);
+        return;
+    }
+
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    bgY+=speed;
-    ctx.fillStyle="#555";
-    ctx.fillRect(0,bgY%canvas.height,canvas.width,canvas.height);
-    ctx.fillRect(0,bgY%canvas.height-canvas.height,canvas.width,canvas.height);
+    /* HAREKET */
+    if(moveLeft) player.x -= player.speed;
+    if(moveRight) player.x += player.speed;
 
-    car.x+=dir*8;
-    car.x=Math.max(10,Math.min(canvas.width-car.w-10,car.x));
+    player.x = Math.max(0,Math.min(canvas.width-player.w,player.x));
 
-    spawn();
-    obs.forEach(o=>o.y+=speed);
-    obs=obs.filter(o=>o.y<canvas.height);
+    /* OYUNCU */
+    ctx.fillStyle="lime";
+    ctx.fillRect(player.x,player.y,player.w,player.h);
 
-    obs.forEach(o=>{
-        ctx.fillStyle="#111";
+    /* ENGELLER */
+    spawnObstacle();
+    obstacles.forEach(o=>{
+        o.y += o.speed;
+        ctx.fillStyle="red";
         ctx.fillRect(o.x,o.y,o.w,o.h);
+
+        /* ÇARPIŞMA */
         if(
-            car.x<o.x+o.w && car.x+car.w>o.x &&
-            car.y<o.y+o.h && car.y+car.h>o.y
+            player.x < o.x+o.w &&
+            player.x+player.w > o.x &&
+            player.y < o.y+o.h &&
+            player.y+player.h > o.y
         ){
-            crash.play();
-            lives--; obs=[];
-            if(lives<=0) end();
+            gameOver=true;
         }
     });
 
-    ctx.drawImage(carImg,car.x,car.y,car.w,car.h);
+    obstacles = obstacles.filter(o=>o.y < canvas.height);
 
-    hud.innerHTML=`🏁 ${score} | ⭐ ${best} | ❤️ ${lives}`;
+    /* SKOR */
+    score++;
+    ctx.fillStyle="white";
+    ctx.font="20px Arial";
+    ctx.fillText("Skor: "+score,20,30);
 
     requestAnimationFrame(loop);
 }
 
-function startGame(){
-    menu.style.display="none";
-    car.x=canvas.width/2-car.w/2;
-    car.y=canvas.height-car.h-30;
-    obs=[];score=0;lives=3;speed=6;
-    running=true;
-    motor.play();
-    loop();
-}
-
-function end(){
-    running=false;
-    motor.pause();
-    menu.style.display="flex";
-}
+loop();
 </script>
 
 </body>
@@ -642,210 +435,141 @@ function end(){
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-<title>Mobil Yarış Oyunu</title>
-
+<title>Mobil Oyun</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:Arial}
-
-#gameWrapper{position:fixed;inset:0}
-canvas{width:100%;height:100%;display:block}
-
-#hud{
-    position:absolute;
-    top:10px;left:10px;
-    color:#fff;
-    font-size:16px;
-    text-shadow:0 0 5px #000;
+html,body{
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#222;
 }
-
-#menu{
-    position:absolute;inset:0;
-    background:#000c;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    color:#fff;
-}
-
-.carSelect img{
-    width:120px;
-    margin:10px;
-    border:3px solid transparent;
-    border-radius:12px;
-}
-.carSelect img.active{border-color:#22c55e}
-
-button{
-    margin-top:20px;
-    padding:15px 40px;
-    font-size:20px;
-    border:none;
-    border-radius:14px;
-    background:#22c55e;
-    color:#fff;
-}
-
-#joystick{
-    position:absolute;
-    bottom:20px;left:20px;
-    width:120px;height:120px;
-    border-radius:50%;
-    background:#ffffff22;
-    touch-action:none;
-}
-
-#stick{
-    position:absolute;
-    inset:35px;
-    background:#fff;
-    border-radius:50%;
+canvas{
+    display:block;
 }
 </style>
 </head>
-
 <body>
 
-<div id="gameWrapper">
-<canvas id="game"></canvas>
-
-<div id="hud"></div>
-
-<div id="menu">
-    <h2>🚗 Araba Seç</h2>
-    <div class="carSelect">
-        <img src="https://i.hizliresim.com/s1x7krz.png" class="active">
-        <img src="https://i.hizliresim.com/7q8g4lm.png">
-    </div>
-    <button onclick="startGame()">BAŞLA</button>
-</div>
-
-<div id="joystick">
-    <div id="stick"></div>
-</div>
-</div>
+<canvas id="c"></canvas>
 
 <script>
-const canvas = document.getElementById("game");
+const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
-const hud = document.getElementById("hud");
-const menu = document.getElementById("menu");
-const joystick = document.getElementById("joystick");
-const stick = document.getElementById("stick");
 
 function resize(){
     canvas.width = innerWidth;
     canvas.height = innerHeight;
 }
-addEventListener("resize",resize);resize();
+resize();
+addEventListener("resize",resize);
 
-/* ================= VERİ ================= */
-let bgY=0, speed=6, score=0, best=localStorage.best||0;
-let lives=3, running=false, dir=0;
+/* OYUNCU */
+const player = {
+    w:50,
+    h:80,
+    x:0,
+    y:0,
+    speed:8
+};
 
-/* ================= ARABA ================= */
-const cars=[
-    "https://i.hizliresim.com/s1x7krz.png",
-    "https://i.hizliresim.com/7q8g4lm.png"
-];
-let carImg=new Image(); carImg.src=cars[0];
-document.querySelectorAll(".carSelect img").forEach((img,i)=>{
-    img.onclick=()=>{
-        document.querySelectorAll(".carSelect img").forEach(x=>x.classList.remove("active"));
-        img.classList.add("active");
-        carImg.src=cars[i];
-    }
+/* ENGELLER */
+let obstacles = [];
+let score = 0;
+let gameOver = false;
+
+/* DOKUNMA */
+let moveLeft=false, moveRight=false;
+
+addEventListener("touchstart",e=>{
+    const x = e.touches[0].clientX;
+    if(x < innerWidth/2) moveLeft=true;
+    else moveRight=true;
 });
 
-const car={w:70,h:140,x:0,y:0};
+addEventListener("touchend",()=>{
+    moveLeft=false;
+    moveRight=false;
+});
 
-/* ================= SES ================= */
-const motor=new Audio("https://assets.mixkit.co/sfx/preview/mixkit-car-engine-loop-1565.mp3");
-motor.loop=true;
-const crash=new Audio("https://assets.mixkit.co/sfx/preview/mixkit-arcade-retro-game-over-213.mp3");
+/* KLAVYE (PC TEST İÇİN) */
+addEventListener("keydown",e=>{
+    if(e.key==="ArrowLeft") moveLeft=true;
+    if(e.key==="ArrowRight") moveRight=true;
+});
+addEventListener("keyup",()=>{
+    moveLeft=false;
+    moveRight=false;
+});
 
-/* ================= ENGELLER ================= */
-let obs=[];
-function spawn(){
+/* BAŞLAT */
+player.x = canvas.width/2 - player.w/2;
+player.y = canvas.height - player.h - 20;
+
+function spawnObstacle(){
     if(Math.random()<0.03){
-        obs.push({
-            x:Math.random()*(canvas.width-120)+60,
-            y:-30,w:60,h:20
+        obstacles.push({
+            x:Math.random()*(canvas.width-40),
+            y:-40,
+            w:40,
+            h:40,
+            speed:6
         });
-        score++;
-        if(score>best){best=score;localStorage.best=best}
     }
 }
 
-/* ================= JOYSTICK ================= */
-let joyActive=false,startX=0;
-joystick.addEventListener("touchstart",e=>{
-    joyActive=true;
-    startX=e.touches[0].clientX;
-});
-joystick.addEventListener("touchmove",e=>{
-    if(!joyActive)return;
-    let dx=e.touches[0].clientX-startX;
-    dir=Math.max(-1,Math.min(1,dx/40));
-    stick.style.transform=`translateX(${dir*20}px)`;
-});
-joystick.addEventListener("touchend",()=>{
-    joyActive=false;dir=0;stick.style.transform="translateX(0)";
-});
-
-/* ================= OYUN ================= */
 function loop(){
-    if(!running)return;
+    if(gameOver){
+        ctx.fillStyle="white";
+        ctx.font="30px Arial";
+        ctx.fillText("GAME OVER",canvas.width/2-90,canvas.height/2);
+        ctx.fillText("Skor: "+score,canvas.width/2-70,canvas.height/2+40);
+        return;
+    }
+
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    bgY+=speed;
-    ctx.fillStyle="#555";
-    ctx.fillRect(0,bgY%canvas.height,canvas.width,canvas.height);
-    ctx.fillRect(0,bgY%canvas.height-canvas.height,canvas.width,canvas.height);
+    /* HAREKET */
+    if(moveLeft) player.x -= player.speed;
+    if(moveRight) player.x += player.speed;
 
-    car.x+=dir*8;
-    car.x=Math.max(10,Math.min(canvas.width-car.w-10,car.x));
+    player.x = Math.max(0,Math.min(canvas.width-player.w,player.x));
 
-    spawn();
-    obs.forEach(o=>o.y+=speed);
-    obs=obs.filter(o=>o.y<canvas.height);
+    /* OYUNCU */
+    ctx.fillStyle="lime";
+    ctx.fillRect(player.x,player.y,player.w,player.h);
 
-    obs.forEach(o=>{
-        ctx.fillStyle="#111";
+    /* ENGELLER */
+    spawnObstacle();
+    obstacles.forEach(o=>{
+        o.y += o.speed;
+        ctx.fillStyle="red";
         ctx.fillRect(o.x,o.y,o.w,o.h);
+
+        /* ÇARPIŞMA */
         if(
-            car.x<o.x+o.w && car.x+car.w>o.x &&
-            car.y<o.y+o.h && car.y+car.h>o.y
+            player.x < o.x+o.w &&
+            player.x+player.w > o.x &&
+            player.y < o.y+o.h &&
+            player.y+player.h > o.y
         ){
-            crash.play();
-            lives--; obs=[];
-            if(lives<=0) end();
+            gameOver=true;
         }
     });
 
-    ctx.drawImage(carImg,car.x,car.y,car.w,car.h);
+    obstacles = obstacles.filter(o=>o.y < canvas.height);
 
-    hud.innerHTML=`🏁 ${score} | ⭐ ${best} | ❤️ ${lives}`;
+    /* SKOR */
+    score++;
+    ctx.fillStyle="white";
+    ctx.font="20px Arial";
+    ctx.fillText("Skor: "+score,20,30);
 
     requestAnimationFrame(loop);
 }
 
-function startGame(){
-    menu.style.display="none";
-    car.x=canvas.width/2-car.w/2;
-    car.y=canvas.height-car.h-30;
-    obs=[];score=0;lives=3;speed=6;
-    running=true;
-    motor.play();
-    loop();
-}
-
-function end(){
-    running=false;
-    motor.pause();
-    menu.style.display="flex";
-}
+loop();
 </script>
 
 </body>
@@ -855,210 +579,141 @@ function end(){
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-<title>Mobil Yarış Oyunu</title>
-
+<title>Mobil Oyun</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:Arial}
-
-#gameWrapper{position:fixed;inset:0}
-canvas{width:100%;height:100%;display:block}
-
-#hud{
-    position:absolute;
-    top:10px;left:10px;
-    color:#fff;
-    font-size:16px;
-    text-shadow:0 0 5px #000;
+html,body{
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#222;
 }
-
-#menu{
-    position:absolute;inset:0;
-    background:#000c;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    color:#fff;
-}
-
-.carSelect img{
-    width:120px;
-    margin:10px;
-    border:3px solid transparent;
-    border-radius:12px;
-}
-.carSelect img.active{border-color:#22c55e}
-
-button{
-    margin-top:20px;
-    padding:15px 40px;
-    font-size:20px;
-    border:none;
-    border-radius:14px;
-    background:#22c55e;
-    color:#fff;
-}
-
-#joystick{
-    position:absolute;
-    bottom:20px;left:20px;
-    width:120px;height:120px;
-    border-radius:50%;
-    background:#ffffff22;
-    touch-action:none;
-}
-
-#stick{
-    position:absolute;
-    inset:35px;
-    background:#fff;
-    border-radius:50%;
+canvas{
+    display:block;
 }
 </style>
 </head>
-
 <body>
 
-<div id="gameWrapper">
-<canvas id="game"></canvas>
-
-<div id="hud"></div>
-
-<div id="menu">
-    <h2>🚗 Araba Seç</h2>
-    <div class="carSelect">
-        <img src="https://i.hizliresim.com/s1x7krz.png" class="active">
-        <img src="https://i.hizliresim.com/7q8g4lm.png">
-    </div>
-    <button onclick="startGame()">BAŞLA</button>
-</div>
-
-<div id="joystick">
-    <div id="stick"></div>
-</div>
-</div>
+<canvas id="c"></canvas>
 
 <script>
-const canvas = document.getElementById("game");
+const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
-const hud = document.getElementById("hud");
-const menu = document.getElementById("menu");
-const joystick = document.getElementById("joystick");
-const stick = document.getElementById("stick");
 
 function resize(){
     canvas.width = innerWidth;
     canvas.height = innerHeight;
 }
-addEventListener("resize",resize);resize();
+resize();
+addEventListener("resize",resize);
 
-/* ================= VERİ ================= */
-let bgY=0, speed=6, score=0, best=localStorage.best||0;
-let lives=3, running=false, dir=0;
+/* OYUNCU */
+const player = {
+    w:50,
+    h:80,
+    x:0,
+    y:0,
+    speed:8
+};
 
-/* ================= ARABA ================= */
-const cars=[
-    "https://i.hizliresim.com/s1x7krz.png",
-    "https://i.hizliresim.com/7q8g4lm.png"
-];
-let carImg=new Image(); carImg.src=cars[0];
-document.querySelectorAll(".carSelect img").forEach((img,i)=>{
-    img.onclick=()=>{
-        document.querySelectorAll(".carSelect img").forEach(x=>x.classList.remove("active"));
-        img.classList.add("active");
-        carImg.src=cars[i];
-    }
+/* ENGELLER */
+let obstacles = [];
+let score = 0;
+let gameOver = false;
+
+/* DOKUNMA */
+let moveLeft=false, moveRight=false;
+
+addEventListener("touchstart",e=>{
+    const x = e.touches[0].clientX;
+    if(x < innerWidth/2) moveLeft=true;
+    else moveRight=true;
 });
 
-const car={w:70,h:140,x:0,y:0};
+addEventListener("touchend",()=>{
+    moveLeft=false;
+    moveRight=false;
+});
 
-/* ================= SES ================= */
-const motor=new Audio("https://assets.mixkit.co/sfx/preview/mixkit-car-engine-loop-1565.mp3");
-motor.loop=true;
-const crash=new Audio("https://assets.mixkit.co/sfx/preview/mixkit-arcade-retro-game-over-213.mp3");
+/* KLAVYE (PC TEST İÇİN) */
+addEventListener("keydown",e=>{
+    if(e.key==="ArrowLeft") moveLeft=true;
+    if(e.key==="ArrowRight") moveRight=true;
+});
+addEventListener("keyup",()=>{
+    moveLeft=false;
+    moveRight=false;
+});
 
-/* ================= ENGELLER ================= */
-let obs=[];
-function spawn(){
+/* BAŞLAT */
+player.x = canvas.width/2 - player.w/2;
+player.y = canvas.height - player.h - 20;
+
+function spawnObstacle(){
     if(Math.random()<0.03){
-        obs.push({
-            x:Math.random()*(canvas.width-120)+60,
-            y:-30,w:60,h:20
+        obstacles.push({
+            x:Math.random()*(canvas.width-40),
+            y:-40,
+            w:40,
+            h:40,
+            speed:6
         });
-        score++;
-        if(score>best){best=score;localStorage.best=best}
     }
 }
 
-/* ================= JOYSTICK ================= */
-let joyActive=false,startX=0;
-joystick.addEventListener("touchstart",e=>{
-    joyActive=true;
-    startX=e.touches[0].clientX;
-});
-joystick.addEventListener("touchmove",e=>{
-    if(!joyActive)return;
-    let dx=e.touches[0].clientX-startX;
-    dir=Math.max(-1,Math.min(1,dx/40));
-    stick.style.transform=`translateX(${dir*20}px)`;
-});
-joystick.addEventListener("touchend",()=>{
-    joyActive=false;dir=0;stick.style.transform="translateX(0)";
-});
-
-/* ================= OYUN ================= */
 function loop(){
-    if(!running)return;
+    if(gameOver){
+        ctx.fillStyle="white";
+        ctx.font="30px Arial";
+        ctx.fillText("GAME OVER",canvas.width/2-90,canvas.height/2);
+        ctx.fillText("Skor: "+score,canvas.width/2-70,canvas.height/2+40);
+        return;
+    }
+
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    bgY+=speed;
-    ctx.fillStyle="#555";
-    ctx.fillRect(0,bgY%canvas.height,canvas.width,canvas.height);
-    ctx.fillRect(0,bgY%canvas.height-canvas.height,canvas.width,canvas.height);
+    /* HAREKET */
+    if(moveLeft) player.x -= player.speed;
+    if(moveRight) player.x += player.speed;
 
-    car.x+=dir*8;
-    car.x=Math.max(10,Math.min(canvas.width-car.w-10,car.x));
+    player.x = Math.max(0,Math.min(canvas.width-player.w,player.x));
 
-    spawn();
-    obs.forEach(o=>o.y+=speed);
-    obs=obs.filter(o=>o.y<canvas.height);
+    /* OYUNCU */
+    ctx.fillStyle="lime";
+    ctx.fillRect(player.x,player.y,player.w,player.h);
 
-    obs.forEach(o=>{
-        ctx.fillStyle="#111";
+    /* ENGELLER */
+    spawnObstacle();
+    obstacles.forEach(o=>{
+        o.y += o.speed;
+        ctx.fillStyle="red";
         ctx.fillRect(o.x,o.y,o.w,o.h);
+
+        /* ÇARPIŞMA */
         if(
-            car.x<o.x+o.w && car.x+car.w>o.x &&
-            car.y<o.y+o.h && car.y+car.h>o.y
+            player.x < o.x+o.w &&
+            player.x+player.w > o.x &&
+            player.y < o.y+o.h &&
+            player.y+player.h > o.y
         ){
-            crash.play();
-            lives--; obs=[];
-            if(lives<=0) end();
+            gameOver=true;
         }
     });
 
-    ctx.drawImage(carImg,car.x,car.y,car.w,car.h);
+    obstacles = obstacles.filter(o=>o.y < canvas.height);
 
-    hud.innerHTML=`🏁 ${score} | ⭐ ${best} | ❤️ ${lives}`;
+    /* SKOR */
+    score++;
+    ctx.fillStyle="white";
+    ctx.font="20px Arial";
+    ctx.fillText("Skor: "+score,20,30);
 
     requestAnimationFrame(loop);
 }
 
-function startGame(){
-    menu.style.display="none";
-    car.x=canvas.width/2-car.w/2;
-    car.y=canvas.height-car.h-30;
-    obs=[];score=0;lives=3;speed=6;
-    running=true;
-    motor.play();
-    loop();
-}
-
-function end(){
-    running=false;
-    motor.pause();
-    menu.style.display="flex";
-}
+loop();
 </script>
 
 </body>
@@ -1068,210 +723,141 @@ function end(){
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-<title>Mobil Yarış Oyunu</title>
-
+<title>Mobil Oyun</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:Arial}
-
-#gameWrapper{position:fixed;inset:0}
-canvas{width:100%;height:100%;display:block}
-
-#hud{
-    position:absolute;
-    top:10px;left:10px;
-    color:#fff;
-    font-size:16px;
-    text-shadow:0 0 5px #000;
+html,body{
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#222;
 }
-
-#menu{
-    position:absolute;inset:0;
-    background:#000c;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    color:#fff;
-}
-
-.carSelect img{
-    width:120px;
-    margin:10px;
-    border:3px solid transparent;
-    border-radius:12px;
-}
-.carSelect img.active{border-color:#22c55e}
-
-button{
-    margin-top:20px;
-    padding:15px 40px;
-    font-size:20px;
-    border:none;
-    border-radius:14px;
-    background:#22c55e;
-    color:#fff;
-}
-
-#joystick{
-    position:absolute;
-    bottom:20px;left:20px;
-    width:120px;height:120px;
-    border-radius:50%;
-    background:#ffffff22;
-    touch-action:none;
-}
-
-#stick{
-    position:absolute;
-    inset:35px;
-    background:#fff;
-    border-radius:50%;
+canvas{
+    display:block;
 }
 </style>
 </head>
-
 <body>
 
-<div id="gameWrapper">
-<canvas id="game"></canvas>
-
-<div id="hud"></div>
-
-<div id="menu">
-    <h2>🚗 Araba Seç</h2>
-    <div class="carSelect">
-        <img src="https://i.hizliresim.com/s1x7krz.png" class="active">
-        <img src="https://i.hizliresim.com/7q8g4lm.png">
-    </div>
-    <button onclick="startGame()">BAŞLA</button>
-</div>
-
-<div id="joystick">
-    <div id="stick"></div>
-</div>
-</div>
+<canvas id="c"></canvas>
 
 <script>
-const canvas = document.getElementById("game");
+const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
-const hud = document.getElementById("hud");
-const menu = document.getElementById("menu");
-const joystick = document.getElementById("joystick");
-const stick = document.getElementById("stick");
 
 function resize(){
     canvas.width = innerWidth;
     canvas.height = innerHeight;
 }
-addEventListener("resize",resize);resize();
+resize();
+addEventListener("resize",resize);
 
-/* ================= VERİ ================= */
-let bgY=0, speed=6, score=0, best=localStorage.best||0;
-let lives=3, running=false, dir=0;
+/* OYUNCU */
+const player = {
+    w:50,
+    h:80,
+    x:0,
+    y:0,
+    speed:8
+};
 
-/* ================= ARABA ================= */
-const cars=[
-    "https://i.hizliresim.com/s1x7krz.png",
-    "https://i.hizliresim.com/7q8g4lm.png"
-];
-let carImg=new Image(); carImg.src=cars[0];
-document.querySelectorAll(".carSelect img").forEach((img,i)=>{
-    img.onclick=()=>{
-        document.querySelectorAll(".carSelect img").forEach(x=>x.classList.remove("active"));
-        img.classList.add("active");
-        carImg.src=cars[i];
-    }
+/* ENGELLER */
+let obstacles = [];
+let score = 0;
+let gameOver = false;
+
+/* DOKUNMA */
+let moveLeft=false, moveRight=false;
+
+addEventListener("touchstart",e=>{
+    const x = e.touches[0].clientX;
+    if(x < innerWidth/2) moveLeft=true;
+    else moveRight=true;
 });
 
-const car={w:70,h:140,x:0,y:0};
+addEventListener("touchend",()=>{
+    moveLeft=false;
+    moveRight=false;
+});
 
-/* ================= SES ================= */
-const motor=new Audio("https://assets.mixkit.co/sfx/preview/mixkit-car-engine-loop-1565.mp3");
-motor.loop=true;
-const crash=new Audio("https://assets.mixkit.co/sfx/preview/mixkit-arcade-retro-game-over-213.mp3");
+/* KLAVYE (PC TEST İÇİN) */
+addEventListener("keydown",e=>{
+    if(e.key==="ArrowLeft") moveLeft=true;
+    if(e.key==="ArrowRight") moveRight=true;
+});
+addEventListener("keyup",()=>{
+    moveLeft=false;
+    moveRight=false;
+});
 
-/* ================= ENGELLER ================= */
-let obs=[];
-function spawn(){
+/* BAŞLAT */
+player.x = canvas.width/2 - player.w/2;
+player.y = canvas.height - player.h - 20;
+
+function spawnObstacle(){
     if(Math.random()<0.03){
-        obs.push({
-            x:Math.random()*(canvas.width-120)+60,
-            y:-30,w:60,h:20
+        obstacles.push({
+            x:Math.random()*(canvas.width-40),
+            y:-40,
+            w:40,
+            h:40,
+            speed:6
         });
-        score++;
-        if(score>best){best=score;localStorage.best=best}
     }
 }
 
-/* ================= JOYSTICK ================= */
-let joyActive=false,startX=0;
-joystick.addEventListener("touchstart",e=>{
-    joyActive=true;
-    startX=e.touches[0].clientX;
-});
-joystick.addEventListener("touchmove",e=>{
-    if(!joyActive)return;
-    let dx=e.touches[0].clientX-startX;
-    dir=Math.max(-1,Math.min(1,dx/40));
-    stick.style.transform=`translateX(${dir*20}px)`;
-});
-joystick.addEventListener("touchend",()=>{
-    joyActive=false;dir=0;stick.style.transform="translateX(0)";
-});
-
-/* ================= OYUN ================= */
 function loop(){
-    if(!running)return;
+    if(gameOver){
+        ctx.fillStyle="white";
+        ctx.font="30px Arial";
+        ctx.fillText("GAME OVER",canvas.width/2-90,canvas.height/2);
+        ctx.fillText("Skor: "+score,canvas.width/2-70,canvas.height/2+40);
+        return;
+    }
+
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    bgY+=speed;
-    ctx.fillStyle="#555";
-    ctx.fillRect(0,bgY%canvas.height,canvas.width,canvas.height);
-    ctx.fillRect(0,bgY%canvas.height-canvas.height,canvas.width,canvas.height);
+    /* HAREKET */
+    if(moveLeft) player.x -= player.speed;
+    if(moveRight) player.x += player.speed;
 
-    car.x+=dir*8;
-    car.x=Math.max(10,Math.min(canvas.width-car.w-10,car.x));
+    player.x = Math.max(0,Math.min(canvas.width-player.w,player.x));
 
-    spawn();
-    obs.forEach(o=>o.y+=speed);
-    obs=obs.filter(o=>o.y<canvas.height);
+    /* OYUNCU */
+    ctx.fillStyle="lime";
+    ctx.fillRect(player.x,player.y,player.w,player.h);
 
-    obs.forEach(o=>{
-        ctx.fillStyle="#111";
+    /* ENGELLER */
+    spawnObstacle();
+    obstacles.forEach(o=>{
+        o.y += o.speed;
+        ctx.fillStyle="red";
         ctx.fillRect(o.x,o.y,o.w,o.h);
+
+        /* ÇARPIŞMA */
         if(
-            car.x<o.x+o.w && car.x+car.w>o.x &&
-            car.y<o.y+o.h && car.y+car.h>o.y
+            player.x < o.x+o.w &&
+            player.x+player.w > o.x &&
+            player.y < o.y+o.h &&
+            player.y+player.h > o.y
         ){
-            crash.play();
-            lives--; obs=[];
-            if(lives<=0) end();
+            gameOver=true;
         }
     });
 
-    ctx.drawImage(carImg,car.x,car.y,car.w,car.h);
+    obstacles = obstacles.filter(o=>o.y < canvas.height);
 
-    hud.innerHTML=`🏁 ${score} | ⭐ ${best} | ❤️ ${lives}`;
+    /* SKOR */
+    score++;
+    ctx.fillStyle="white";
+    ctx.font="20px Arial";
+    ctx.fillText("Skor: "+score,20,30);
 
     requestAnimationFrame(loop);
 }
 
-function startGame(){
-    menu.style.display="none";
-    car.x=canvas.width/2-car.w/2;
-    car.y=canvas.height-car.h-30;
-    obs=[];score=0;lives=3;speed=6;
-    running=true;
-    motor.play();
-    loop();
-}
-
-function end(){
-    running=false;
-    motor.pause();
-    menu.style.display="flex";
-}
+loop();
 </script>
 
 </body>
@@ -1281,210 +867,573 @@ function end(){
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
-<title>Mobil Yarış Oyunu</title>
-
+<title>Mobil Oyun</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:Arial}
-
-#gameWrapper{position:fixed;inset:0}
-canvas{width:100%;height:100%;display:block}
-
-#hud{
-    position:absolute;
-    top:10px;left:10px;
-    color:#fff;
-    font-size:16px;
-    text-shadow:0 0 5px #000;
+html,body{
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#222;
 }
-
-#menu{
-    position:absolute;inset:0;
-    background:#000c;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    color:#fff;
-}
-
-.carSelect img{
-    width:120px;
-    margin:10px;
-    border:3px solid transparent;
-    border-radius:12px;
-}
-.carSelect img.active{border-color:#22c55e}
-
-button{
-    margin-top:20px;
-    padding:15px 40px;
-    font-size:20px;
-    border:none;
-    border-radius:14px;
-    background:#22c55e;
-    color:#fff;
-}
-
-#joystick{
-    position:absolute;
-    bottom:20px;left:20px;
-    width:120px;height:120px;
-    border-radius:50%;
-    background:#ffffff22;
-    touch-action:none;
-}
-
-#stick{
-    position:absolute;
-    inset:35px;
-    background:#fff;
-    border-radius:50%;
+canvas{
+    display:block;
 }
 </style>
 </head>
-
 <body>
 
-<div id="gameWrapper">
-<canvas id="game"></canvas>
-
-<div id="hud"></div>
-
-<div id="menu">
-    <h2>🚗 Araba Seç</h2>
-    <div class="carSelect">
-        <img src="https://i.hizliresim.com/s1x7krz.png" class="active">
-        <img src="https://i.hizliresim.com/7q8g4lm.png">
-    </div>
-    <button onclick="startGame()">BAŞLA</button>
-</div>
-
-<div id="joystick">
-    <div id="stick"></div>
-</div>
-</div>
+<canvas id="c"></canvas>
 
 <script>
-const canvas = document.getElementById("game");
+const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
-const hud = document.getElementById("hud");
-const menu = document.getElementById("menu");
-const joystick = document.getElementById("joystick");
-const stick = document.getElementById("stick");
 
 function resize(){
     canvas.width = innerWidth;
     canvas.height = innerHeight;
 }
-addEventListener("resize",resize);resize();
+resize();
+addEventListener("resize",resize);
 
-/* ================= VERİ ================= */
-let bgY=0, speed=6, score=0, best=localStorage.best||0;
-let lives=3, running=false, dir=0;
+/* OYUNCU */
+const player = {
+    w:50,
+    h:80,
+    x:0,
+    y:0,
+    speed:8
+};
 
-/* ================= ARABA ================= */
-const cars=[
-    "https://i.hizliresim.com/s1x7krz.png",
-    "https://i.hizliresim.com/7q8g4lm.png"
-];
-let carImg=new Image(); carImg.src=cars[0];
-document.querySelectorAll(".carSelect img").forEach((img,i)=>{
-    img.onclick=()=>{
-        document.querySelectorAll(".carSelect img").forEach(x=>x.classList.remove("active"));
-        img.classList.add("active");
-        carImg.src=cars[i];
-    }
+/* ENGELLER */
+let obstacles = [];
+let score = 0;
+let gameOver = false;
+
+/* DOKUNMA */
+let moveLeft=false, moveRight=false;
+
+addEventListener("touchstart",e=>{
+    const x = e.touches[0].clientX;
+    if(x < innerWidth/2) moveLeft=true;
+    else moveRight=true;
 });
 
-const car={w:70,h:140,x:0,y:0};
+addEventListener("touchend",()=>{
+    moveLeft=false;
+    moveRight=false;
+});
 
-/* ================= SES ================= */
-const motor=new Audio("https://assets.mixkit.co/sfx/preview/mixkit-car-engine-loop-1565.mp3");
-motor.loop=true;
-const crash=new Audio("https://assets.mixkit.co/sfx/preview/mixkit-arcade-retro-game-over-213.mp3");
+/* KLAVYE (PC TEST İÇİN) */
+addEventListener("keydown",e=>{
+    if(e.key==="ArrowLeft") moveLeft=true;
+    if(e.key==="ArrowRight") moveRight=true;
+});
+addEventListener("keyup",()=>{
+    moveLeft=false;
+    moveRight=false;
+});
 
-/* ================= ENGELLER ================= */
-let obs=[];
-function spawn(){
+/* BAŞLAT */
+player.x = canvas.width/2 - player.w/2;
+player.y = canvas.height - player.h - 20;
+
+function spawnObstacle(){
     if(Math.random()<0.03){
-        obs.push({
-            x:Math.random()*(canvas.width-120)+60,
-            y:-30,w:60,h:20
+        obstacles.push({
+            x:Math.random()*(canvas.width-40),
+            y:-40,
+            w:40,
+            h:40,
+            speed:6
         });
-        score++;
-        if(score>best){best=score;localStorage.best=best}
     }
 }
 
-/* ================= JOYSTICK ================= */
-let joyActive=false,startX=0;
-joystick.addEventListener("touchstart",e=>{
-    joyActive=true;
-    startX=e.touches[0].clientX;
-});
-joystick.addEventListener("touchmove",e=>{
-    if(!joyActive)return;
-    let dx=e.touches[0].clientX-startX;
-    dir=Math.max(-1,Math.min(1,dx/40));
-    stick.style.transform=`translateX(${dir*20}px)`;
-});
-joystick.addEventListener("touchend",()=>{
-    joyActive=false;dir=0;stick.style.transform="translateX(0)";
-});
-
-/* ================= OYUN ================= */
 function loop(){
-    if(!running)return;
+    if(gameOver){
+        ctx.fillStyle="white";
+        ctx.font="30px Arial";
+        ctx.fillText("GAME OVER",canvas.width/2-90,canvas.height/2);
+        ctx.fillText("Skor: "+score,canvas.width/2-70,canvas.height/2+40);
+        return;
+    }
+
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    bgY+=speed;
-    ctx.fillStyle="#555";
-    ctx.fillRect(0,bgY%canvas.height,canvas.width,canvas.height);
-    ctx.fillRect(0,bgY%canvas.height-canvas.height,canvas.width,canvas.height);
+    /* HAREKET */
+    if(moveLeft) player.x -= player.speed;
+    if(moveRight) player.x += player.speed;
 
-    car.x+=dir*8;
-    car.x=Math.max(10,Math.min(canvas.width-car.w-10,car.x));
+    player.x = Math.max(0,Math.min(canvas.width-player.w,player.x));
 
-    spawn();
-    obs.forEach(o=>o.y+=speed);
-    obs=obs.filter(o=>o.y<canvas.height);
+    /* OYUNCU */
+    ctx.fillStyle="lime";
+    ctx.fillRect(player.x,player.y,player.w,player.h);
 
-    obs.forEach(o=>{
-        ctx.fillStyle="#111";
+    /* ENGELLER */
+    spawnObstacle();
+    obstacles.forEach(o=>{
+        o.y += o.speed;
+        ctx.fillStyle="red";
         ctx.fillRect(o.x,o.y,o.w,o.h);
+
+        /* ÇARPIŞMA */
         if(
-            car.x<o.x+o.w && car.x+car.w>o.x &&
-            car.y<o.y+o.h && car.y+car.h>o.y
+            player.x < o.x+o.w &&
+            player.x+player.w > o.x &&
+            player.y < o.y+o.h &&
+            player.y+player.h > o.y
         ){
-            crash.play();
-            lives--; obs=[];
-            if(lives<=0) end();
+            gameOver=true;
         }
     });
 
-    ctx.drawImage(carImg,car.x,car.y,car.w,car.h);
+    obstacles = obstacles.filter(o=>o.y < canvas.height);
 
-    hud.innerHTML=`🏁 ${score} | ⭐ ${best} | ❤️ ${lives}`;
+    /* SKOR */
+    score++;
+    ctx.fillStyle="white";
+    ctx.font="20px Arial";
+    ctx.fillText("Skor: "+score,20,30);
 
     requestAnimationFrame(loop);
 }
 
-function startGame(){
-    menu.style.display="none";
-    car.x=canvas.width/2-car.w/2;
-    car.y=canvas.height-car.h-30;
-    obs=[];score=0;lives=3;speed=6;
-    running=true;
-    motor.play();
-    loop();
+loop();
+</script>
+
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>Mobil Oyun</title>
+<style>
+html,body{
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#222;
+}
+canvas{
+    display:block;
+}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+function resize(){
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+}
+resize();
+addEventListener("resize",resize);
+
+/* OYUNCU */
+const player = {
+    w:50,
+    h:80,
+    x:0,
+    y:0,
+    speed:8
+};
+
+/* ENGELLER */
+let obstacles = [];
+let score = 0;
+let gameOver = false;
+
+/* DOKUNMA */
+let moveLeft=false, moveRight=false;
+
+addEventListener("touchstart",e=>{
+    const x = e.touches[0].clientX;
+    if(x < innerWidth/2) moveLeft=true;
+    else moveRight=true;
+});
+
+addEventListener("touchend",()=>{
+    moveLeft=false;
+    moveRight=false;
+});
+
+/* KLAVYE (PC TEST İÇİN) */
+addEventListener("keydown",e=>{
+    if(e.key==="ArrowLeft") moveLeft=true;
+    if(e.key==="ArrowRight") moveRight=true;
+});
+addEventListener("keyup",()=>{
+    moveLeft=false;
+    moveRight=false;
+});
+
+/* BAŞLAT */
+player.x = canvas.width/2 - player.w/2;
+player.y = canvas.height - player.h - 20;
+
+function spawnObstacle(){
+    if(Math.random()<0.03){
+        obstacles.push({
+            x:Math.random()*(canvas.width-40),
+            y:-40,
+            w:40,
+            h:40,
+            speed:6
+        });
+    }
 }
 
-function end(){
-    running=false;
-    motor.pause();
-    menu.style.display="flex";
+function loop(){
+    if(gameOver){
+        ctx.fillStyle="white";
+        ctx.font="30px Arial";
+        ctx.fillText("GAME OVER",canvas.width/2-90,canvas.height/2);
+        ctx.fillText("Skor: "+score,canvas.width/2-70,canvas.height/2+40);
+        return;
+    }
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    /* HAREKET */
+    if(moveLeft) player.x -= player.speed;
+    if(moveRight) player.x += player.speed;
+
+    player.x = Math.max(0,Math.min(canvas.width-player.w,player.x));
+
+    /* OYUNCU */
+    ctx.fillStyle="lime";
+    ctx.fillRect(player.x,player.y,player.w,player.h);
+
+    /* ENGELLER */
+    spawnObstacle();
+    obstacles.forEach(o=>{
+        o.y += o.speed;
+        ctx.fillStyle="red";
+        ctx.fillRect(o.x,o.y,o.w,o.h);
+
+        /* ÇARPIŞMA */
+        if(
+            player.x < o.x+o.w &&
+            player.x+player.w > o.x &&
+            player.y < o.y+o.h &&
+            player.y+player.h > o.y
+        ){
+            gameOver=true;
+        }
+    });
+
+    obstacles = obstacles.filter(o=>o.y < canvas.height);
+
+    /* SKOR */
+    score++;
+    ctx.fillStyle="white";
+    ctx.font="20px Arial";
+    ctx.fillText("Skor: "+score,20,30);
+
+    requestAnimationFrame(loop);
 }
+
+loop();
+</script>
+
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>Mobil Oyun</title>
+<style>
+html,body{
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#222;
+}
+canvas{
+    display:block;
+}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+function resize(){
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+}
+resize();
+addEventListener("resize",resize);
+
+/* OYUNCU */
+const player = {
+    w:50,
+    h:80,
+    x:0,
+    y:0,
+    speed:8
+};
+
+/* ENGELLER */
+let obstacles = [];
+let score = 0;
+let gameOver = false;
+
+/* DOKUNMA */
+let moveLeft=false, moveRight=false;
+
+addEventListener("touchstart",e=>{
+    const x = e.touches[0].clientX;
+    if(x < innerWidth/2) moveLeft=true;
+    else moveRight=true;
+});
+
+addEventListener("touchend",()=>{
+    moveLeft=false;
+    moveRight=false;
+});
+
+/* KLAVYE (PC TEST İÇİN) */
+addEventListener("keydown",e=>{
+    if(e.key==="ArrowLeft") moveLeft=true;
+    if(e.key==="ArrowRight") moveRight=true;
+});
+addEventListener("keyup",()=>{
+    moveLeft=false;
+    moveRight=false;
+});
+
+/* BAŞLAT */
+player.x = canvas.width/2 - player.w/2;
+player.y = canvas.height - player.h - 20;
+
+function spawnObstacle(){
+    if(Math.random()<0.03){
+        obstacles.push({
+            x:Math.random()*(canvas.width-40),
+            y:-40,
+            w:40,
+            h:40,
+            speed:6
+        });
+    }
+}
+
+function loop(){
+    if(gameOver){
+        ctx.fillStyle="white";
+        ctx.font="30px Arial";
+        ctx.fillText("GAME OVER",canvas.width/2-90,canvas.height/2);
+        ctx.fillText("Skor: "+score,canvas.width/2-70,canvas.height/2+40);
+        return;
+    }
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    /* HAREKET */
+    if(moveLeft) player.x -= player.speed;
+    if(moveRight) player.x += player.speed;
+
+    player.x = Math.max(0,Math.min(canvas.width-player.w,player.x));
+
+    /* OYUNCU */
+    ctx.fillStyle="lime";
+    ctx.fillRect(player.x,player.y,player.w,player.h);
+
+    /* ENGELLER */
+    spawnObstacle();
+    obstacles.forEach(o=>{
+        o.y += o.speed;
+        ctx.fillStyle="red";
+        ctx.fillRect(o.x,o.y,o.w,o.h);
+
+        /* ÇARPIŞMA */
+        if(
+            player.x < o.x+o.w &&
+            player.x+player.w > o.x &&
+            player.y < o.y+o.h &&
+            player.y+player.h > o.y
+        ){
+            gameOver=true;
+        }
+    });
+
+    obstacles = obstacles.filter(o=>o.y < canvas.height);
+
+    /* SKOR */
+    score++;
+    ctx.fillStyle="white";
+    ctx.font="20px Arial";
+    ctx.fillText("Skor: "+score,20,30);
+
+    requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>Mobil Oyun</title>
+<style>
+html,body{
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#222;
+}
+canvas{
+    display:block;
+}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+function resize(){
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+}
+resize();
+addEventListener("resize",resize);
+
+/* OYUNCU */
+const player = {
+    w:50,
+    h:80,
+    x:0,
+    y:0,
+    speed:8
+};
+
+/* ENGELLER */
+let obstacles = [];
+let score = 0;
+let gameOver = false;
+
+/* DOKUNMA */
+let moveLeft=false, moveRight=false;
+
+addEventListener("touchstart",e=>{
+    const x = e.touches[0].clientX;
+    if(x < innerWidth/2) moveLeft=true;
+    else moveRight=true;
+});
+
+addEventListener("touchend",()=>{
+    moveLeft=false;
+    moveRight=false;
+});
+
+/* KLAVYE (PC TEST İÇİN) */
+addEventListener("keydown",e=>{
+    if(e.key==="ArrowLeft") moveLeft=true;
+    if(e.key==="ArrowRight") moveRight=true;
+});
+addEventListener("keyup",()=>{
+    moveLeft=false;
+    moveRight=false;
+});
+
+/* BAŞLAT */
+player.x = canvas.width/2 - player.w/2;
+player.y = canvas.height - player.h - 20;
+
+function spawnObstacle(){
+    if(Math.random()<0.03){
+        obstacles.push({
+            x:Math.random()*(canvas.width-40),
+            y:-40,
+            w:40,
+            h:40,
+            speed:6
+        });
+    }
+}
+
+function loop(){
+    if(gameOver){
+        ctx.fillStyle="white";
+        ctx.font="30px Arial";
+        ctx.fillText("GAME OVER",canvas.width/2-90,canvas.height/2);
+        ctx.fillText("Skor: "+score,canvas.width/2-70,canvas.height/2+40);
+        return;
+    }
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    /* HAREKET */
+    if(moveLeft) player.x -= player.speed;
+    if(moveRight) player.x += player.speed;
+
+    player.x = Math.max(0,Math.min(canvas.width-player.w,player.x));
+
+    /* OYUNCU */
+    ctx.fillStyle="lime";
+    ctx.fillRect(player.x,player.y,player.w,player.h);
+
+    /* ENGELLER */
+    spawnObstacle();
+    obstacles.forEach(o=>{
+        o.y += o.speed;
+        ctx.fillStyle="red";
+        ctx.fillRect(o.x,o.y,o.w,o.h);
+
+        /* ÇARPIŞMA */
+        if(
+            player.x < o.x+o.w &&
+            player.x+player.w > o.x &&
+            player.y < o.y+o.h &&
+            player.y+player.h > o.y
+        ){
+            gameOver=true;
+        }
+    });
+
+    obstacles = obstacles.filter(o=>o.y < canvas.height);
+
+    /* SKOR */
+    score++;
+    ctx.fillStyle="white";
+    ctx.font="20px Arial";
+    ctx.fillText("Skor: "+score,20,30);
+
+    requestAnimationFrame(loop);
+}
+
+loop();
 </script>
 
 </body>
