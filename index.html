@@ -2,44 +2,49 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Yarış Arabası Oyunu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Yarış Oyunu</title>
 
 <style>
-body{
-    margin:0;
-    background:#1a202c;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+    width:100%;
+    height:100%;
     overflow:hidden;
+    background:#111;
+    font-family:Arial,Helvetica,sans-serif;
 }
-#gameContainer{
-    position:relative;
+#gameWrapper{
+    position:fixed;
+    inset:0;
 }
 canvas{
-    background:#555;
+    width:100%;
+    height:100%;
     display:block;
+    background:#555;
 }
-#ui{
+#hud{
     position:absolute;
-    top:10px;
-    left:10px;
+    top:15px;
+    left:15px;
     color:#fff;
-    font:18px Arial;
+    font-size:18px;
+    line-height:1.5;
+    text-shadow:0 0 5px #000;
 }
-#restartBtn{
+#centerBtn{
     position:absolute;
     inset:0;
     margin:auto;
-    width:220px;
-    height:60px;
-    font-size:22px;
+    width:240px;
+    height:70px;
     border:none;
-    border-radius:12px;
+    border-radius:14px;
+    font-size:24px;
+    font-weight:bold;
     background:#16a34a;
-    color:white;
+    color:#fff;
     cursor:pointer;
     display:none;
 }
@@ -48,26 +53,40 @@ canvas{
 
 <body>
 
-<div id="gameContainer">
-    <canvas id="game" width="800" height="600"></canvas>
-    <div id="ui"></div>
-    <button id="restartBtn">Yeniden Oyna</button>
+<div id="gameWrapper">
+    <canvas id="game"></canvas>
+    <div id="hud"></div>
+    <button id="centerBtn">Yeniden Oyna</button>
 </div>
 
 <script>
+/* ================== CANVAS ================== */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-const ui = document.getElementById("ui");
-const restartBtn = document.getElementById("restartBtn");
+const hud = document.getElementById("hud");
+const centerBtn = document.getElementById("centerBtn");
 
-/* ==================== OYUN DEĞİŞKENLERİ ==================== */
-const road = { grass:100, speed:6 };
-const car = {
-    w:70, h:140,
-    x:canvas.width/2-35,
-    y:canvas.height-170,
-    speed:6
+function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+/* ================== OYUN VERİLERİ ================== */
+const road = {
+    grass: () => canvas.width * 0.15,
+    speed: 6
 };
+
+const car = {
+    w: 70,
+    h: 140,
+    x: 0,
+    y: 0,
+    speed: 7
+};
+
 let obstacles = [];
 let score = 0;
 let level = 1;
@@ -75,57 +94,185 @@ let lives = 3;
 let paused = false;
 let gameOver = false;
 
-/* ==================== GÖRSELLER ==================== */
+/* ================== GÖRSELLER ================== */
 const carImg = new Image();
 carImg.src = "https://i.hizliresim.com/s1x7krz.png";
 
-/* ==================== KONTROLLER ==================== */
+/* ================== KONTROLLER ================== */
 const keys = {};
 window.addEventListener("keydown", e=>{
     keys[e.key] = true;
-    if(e.key === "p"
+    if(e.key === "p") paused = !paused;
+});
+window.addEventListener("keyup", e=> keys[e.key]=false);
+
+/* ================== ÇİZİM ================== */
+function drawRoad(){
+    const g = road.grass();
+
+    ctx.fillStyle="#4CAF50";
+    ctx.fillRect(0,0,g,canvas.height);
+    ctx.fillRect(canvas.width-g,0,g,canvas.height);
+
+    ctx.fillStyle="#555";
+    ctx.fillRect(g,0,canvas.width-g*2,canvas.height);
+}
+
+function drawCar(){
+    ctx.drawImage(carImg,car.x,car.y,car.w,car.h);
+}
+
+function drawObstacles(){
+    ctx.fillStyle="#111";
+    obstacles.forEach(o=>{
+        ctx.fillRect(o.x,o.y,o.w,o.h);
+    });
+}
+
+function drawHUD(){
+    hud.innerHTML = `
+    🏁 Puan: ${score}<br>
+    ⭐ Seviye: ${level}<br>
+    ❤️ Can: ${lives}<br>
+    ⏸ P: Duraklat
+    `;
+}
+
+/* ================== OYUN MEKANİK ================== */
+function spawnObstacle(){
+    if(Math.random() < 0.025){
+        const g = road.grass();
+        obstacles.push({
+            x: Math.random()*(canvas.width-g*2-60)+g,
+            y: -30,
+            w: 60,
+            h: 20
+        });
+        score++;
+        if(score % 10 === 0){
+            level++;
+            road.speed += 1;
+        }
+    }
+}
+
+function moveCar(){
+    const g = road.grass();
+    if(keys["ArrowLeft"] && car.x > g) car.x -= car.speed;
+    if(keys["ArrowRight"] && car.x < canvas.width-g-car.w) car.x += car.speed;
+}
+
+function updateObstacles(){
+    obstacles.forEach(o=> o.y += road.speed);
+    obstacles = obstacles.filter(o=> o.y < canvas.height);
+}
+
+function checkCollision(){
+    obstacles.forEach(o=>{
+        if(
+            car.x < o.x+o.w &&
+            car.x+car.w > o.x &&
+            car.y < o.y+o.h &&
+            car.y+car.h > o.y
+        ){
+            obstacles=[];
+            lives--;
+            if(lives<=0) endGame();
+        }
+    });
+}
+
+/* ================== OYUN DÖNGÜ ================== */
+function loop(){
+    if(gameOver || paused) return;
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    drawRoad();
+    moveCar();
+    spawnObstacle();
+    updateObstacles();
+    checkCollision();
+    drawObstacles();
+    drawCar();
+    drawHUD();
+
+    requestAnimationFrame(loop);
+}
+
+/* ================== BAŞLAT / BİTİR ================== */
+function startGame(){
+    car.x = canvas.width/2 - car.w/2;
+    car.y = canvas.height - car.h - 40;
+    obstacles=[];
+    score=0;
+    level=1;
+    lives=3;
+    road.speed=6;
+    paused=false;
+    gameOver=false;
+    centerBtn.style.display="none";
+    loop();
+}
+
+function endGame(){
+    gameOver=true;
+    centerBtn.style.display="block";
+}
+
+centerBtn.onclick = startGame;
+startGame();
+</script>
+
+</body>
+</html>
 <!DOCTYPE html>
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Yarış Arabası Oyunu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Yarış Oyunu</title>
 
 <style>
-body{
-    margin:0;
-    background:#1a202c;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+    width:100%;
+    height:100%;
     overflow:hidden;
+    background:#111;
+    font-family:Arial,Helvetica,sans-serif;
 }
-#gameContainer{
-    position:relative;
+#gameWrapper{
+    position:fixed;
+    inset:0;
 }
 canvas{
-    background:#555;
+    width:100%;
+    height:100%;
     display:block;
+    background:#555;
 }
-#ui{
+#hud{
     position:absolute;
-    top:10px;
-    left:10px;
+    top:15px;
+    left:15px;
     color:#fff;
-    font:18px Arial;
+    font-size:18px;
+    line-height:1.5;
+    text-shadow:0 0 5px #000;
 }
-#restartBtn{
+#centerBtn{
     position:absolute;
     inset:0;
     margin:auto;
-    width:220px;
-    height:60px;
-    font-size:22px;
+    width:240px;
+    height:70px;
     border:none;
-    border-radius:12px;
+    border-radius:14px;
+    font-size:24px;
+    font-weight:bold;
     background:#16a34a;
-    color:white;
+    color:#fff;
     cursor:pointer;
     display:none;
 }
@@ -134,26 +281,40 @@ canvas{
 
 <body>
 
-<div id="gameContainer">
-    <canvas id="game" width="800" height="600"></canvas>
-    <div id="ui"></div>
-    <button id="restartBtn">Yeniden Oyna</button>
+<div id="gameWrapper">
+    <canvas id="game"></canvas>
+    <div id="hud"></div>
+    <button id="centerBtn">Yeniden Oyna</button>
 </div>
 
 <script>
+/* ================== CANVAS ================== */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-const ui = document.getElementById("ui");
-const restartBtn = document.getElementById("restartBtn");
+const hud = document.getElementById("hud");
+const centerBtn = document.getElementById("centerBtn");
 
-/* ==================== OYUN DEĞİŞKENLERİ ==================== */
-const road = { grass:100, speed:6 };
-const car = {
-    w:70, h:140,
-    x:canvas.width/2-35,
-    y:canvas.height-170,
-    speed:6
+function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+/* ================== OYUN VERİLERİ ================== */
+const road = {
+    grass: () => canvas.width * 0.15,
+    speed: 6
 };
+
+const car = {
+    w: 70,
+    h: 140,
+    x: 0,
+    y: 0,
+    speed: 7
+};
+
 let obstacles = [];
 let score = 0;
 let level = 1;
@@ -161,57 +322,185 @@ let lives = 3;
 let paused = false;
 let gameOver = false;
 
-/* ==================== GÖRSELLER ==================== */
+/* ================== GÖRSELLER ================== */
 const carImg = new Image();
 carImg.src = "https://i.hizliresim.com/s1x7krz.png";
 
-/* ==================== KONTROLLER ==================== */
+/* ================== KONTROLLER ================== */
 const keys = {};
 window.addEventListener("keydown", e=>{
     keys[e.key] = true;
-    if(e.key === "p"
+    if(e.key === "p") paused = !paused;
+});
+window.addEventListener("keyup", e=> keys[e.key]=false);
+
+/* ================== ÇİZİM ================== */
+function drawRoad(){
+    const g = road.grass();
+
+    ctx.fillStyle="#4CAF50";
+    ctx.fillRect(0,0,g,canvas.height);
+    ctx.fillRect(canvas.width-g,0,g,canvas.height);
+
+    ctx.fillStyle="#555";
+    ctx.fillRect(g,0,canvas.width-g*2,canvas.height);
+}
+
+function drawCar(){
+    ctx.drawImage(carImg,car.x,car.y,car.w,car.h);
+}
+
+function drawObstacles(){
+    ctx.fillStyle="#111";
+    obstacles.forEach(o=>{
+        ctx.fillRect(o.x,o.y,o.w,o.h);
+    });
+}
+
+function drawHUD(){
+    hud.innerHTML = `
+    🏁 Puan: ${score}<br>
+    ⭐ Seviye: ${level}<br>
+    ❤️ Can: ${lives}<br>
+    ⏸ P: Duraklat
+    `;
+}
+
+/* ================== OYUN MEKANİK ================== */
+function spawnObstacle(){
+    if(Math.random() < 0.025){
+        const g = road.grass();
+        obstacles.push({
+            x: Math.random()*(canvas.width-g*2-60)+g,
+            y: -30,
+            w: 60,
+            h: 20
+        });
+        score++;
+        if(score % 10 === 0){
+            level++;
+            road.speed += 1;
+        }
+    }
+}
+
+function moveCar(){
+    const g = road.grass();
+    if(keys["ArrowLeft"] && car.x > g) car.x -= car.speed;
+    if(keys["ArrowRight"] && car.x < canvas.width-g-car.w) car.x += car.speed;
+}
+
+function updateObstacles(){
+    obstacles.forEach(o=> o.y += road.speed);
+    obstacles = obstacles.filter(o=> o.y < canvas.height);
+}
+
+function checkCollision(){
+    obstacles.forEach(o=>{
+        if(
+            car.x < o.x+o.w &&
+            car.x+car.w > o.x &&
+            car.y < o.y+o.h &&
+            car.y+car.h > o.y
+        ){
+            obstacles=[];
+            lives--;
+            if(lives<=0) endGame();
+        }
+    });
+}
+
+/* ================== OYUN DÖNGÜ ================== */
+function loop(){
+    if(gameOver || paused) return;
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    drawRoad();
+    moveCar();
+    spawnObstacle();
+    updateObstacles();
+    checkCollision();
+    drawObstacles();
+    drawCar();
+    drawHUD();
+
+    requestAnimationFrame(loop);
+}
+
+/* ================== BAŞLAT / BİTİR ================== */
+function startGame(){
+    car.x = canvas.width/2 - car.w/2;
+    car.y = canvas.height - car.h - 40;
+    obstacles=[];
+    score=0;
+    level=1;
+    lives=3;
+    road.speed=6;
+    paused=false;
+    gameOver=false;
+    centerBtn.style.display="none";
+    loop();
+}
+
+function endGame(){
+    gameOver=true;
+    centerBtn.style.display="block";
+}
+
+centerBtn.onclick = startGame;
+startGame();
+</script>
+
+</body>
+</html>
 <!DOCTYPE html>
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Yarış Arabası Oyunu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Yarış Oyunu</title>
 
 <style>
-body{
-    margin:0;
-    background:#1a202c;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+    width:100%;
+    height:100%;
     overflow:hidden;
+    background:#111;
+    font-family:Arial,Helvetica,sans-serif;
 }
-#gameContainer{
-    position:relative;
+#gameWrapper{
+    position:fixed;
+    inset:0;
 }
 canvas{
-    background:#555;
+    width:100%;
+    height:100%;
     display:block;
+    background:#555;
 }
-#ui{
+#hud{
     position:absolute;
-    top:10px;
-    left:10px;
+    top:15px;
+    left:15px;
     color:#fff;
-    font:18px Arial;
+    font-size:18px;
+    line-height:1.5;
+    text-shadow:0 0 5px #000;
 }
-#restartBtn{
+#centerBtn{
     position:absolute;
     inset:0;
     margin:auto;
-    width:220px;
-    height:60px;
-    font-size:22px;
+    width:240px;
+    height:70px;
     border:none;
-    border-radius:12px;
+    border-radius:14px;
+    font-size:24px;
+    font-weight:bold;
     background:#16a34a;
-    color:white;
+    color:#fff;
     cursor:pointer;
     display:none;
 }
@@ -220,26 +509,40 @@ canvas{
 
 <body>
 
-<div id="gameContainer">
-    <canvas id="game" width="800" height="600"></canvas>
-    <div id="ui"></div>
-    <button id="restartBtn">Yeniden Oyna</button>
+<div id="gameWrapper">
+    <canvas id="game"></canvas>
+    <div id="hud"></div>
+    <button id="centerBtn">Yeniden Oyna</button>
 </div>
 
 <script>
+/* ================== CANVAS ================== */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-const ui = document.getElementById("ui");
-const restartBtn = document.getElementById("restartBtn");
+const hud = document.getElementById("hud");
+const centerBtn = document.getElementById("centerBtn");
 
-/* ==================== OYUN DEĞİŞKENLERİ ==================== */
-const road = { grass:100, speed:6 };
-const car = {
-    w:70, h:140,
-    x:canvas.width/2-35,
-    y:canvas.height-170,
-    speed:6
+function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+/* ================== OYUN VERİLERİ ================== */
+const road = {
+    grass: () => canvas.width * 0.15,
+    speed: 6
 };
+
+const car = {
+    w: 70,
+    h: 140,
+    x: 0,
+    y: 0,
+    speed: 7
+};
+
 let obstacles = [];
 let score = 0;
 let level = 1;
@@ -247,57 +550,185 @@ let lives = 3;
 let paused = false;
 let gameOver = false;
 
-/* ==================== GÖRSELLER ==================== */
+/* ================== GÖRSELLER ================== */
 const carImg = new Image();
 carImg.src = "https://i.hizliresim.com/s1x7krz.png";
 
-/* ==================== KONTROLLER ==================== */
+/* ================== KONTROLLER ================== */
 const keys = {};
 window.addEventListener("keydown", e=>{
     keys[e.key] = true;
-    if(e.key === "p"
+    if(e.key === "p") paused = !paused;
+});
+window.addEventListener("keyup", e=> keys[e.key]=false);
+
+/* ================== ÇİZİM ================== */
+function drawRoad(){
+    const g = road.grass();
+
+    ctx.fillStyle="#4CAF50";
+    ctx.fillRect(0,0,g,canvas.height);
+    ctx.fillRect(canvas.width-g,0,g,canvas.height);
+
+    ctx.fillStyle="#555";
+    ctx.fillRect(g,0,canvas.width-g*2,canvas.height);
+}
+
+function drawCar(){
+    ctx.drawImage(carImg,car.x,car.y,car.w,car.h);
+}
+
+function drawObstacles(){
+    ctx.fillStyle="#111";
+    obstacles.forEach(o=>{
+        ctx.fillRect(o.x,o.y,o.w,o.h);
+    });
+}
+
+function drawHUD(){
+    hud.innerHTML = `
+    🏁 Puan: ${score}<br>
+    ⭐ Seviye: ${level}<br>
+    ❤️ Can: ${lives}<br>
+    ⏸ P: Duraklat
+    `;
+}
+
+/* ================== OYUN MEKANİK ================== */
+function spawnObstacle(){
+    if(Math.random() < 0.025){
+        const g = road.grass();
+        obstacles.push({
+            x: Math.random()*(canvas.width-g*2-60)+g,
+            y: -30,
+            w: 60,
+            h: 20
+        });
+        score++;
+        if(score % 10 === 0){
+            level++;
+            road.speed += 1;
+        }
+    }
+}
+
+function moveCar(){
+    const g = road.grass();
+    if(keys["ArrowLeft"] && car.x > g) car.x -= car.speed;
+    if(keys["ArrowRight"] && car.x < canvas.width-g-car.w) car.x += car.speed;
+}
+
+function updateObstacles(){
+    obstacles.forEach(o=> o.y += road.speed);
+    obstacles = obstacles.filter(o=> o.y < canvas.height);
+}
+
+function checkCollision(){
+    obstacles.forEach(o=>{
+        if(
+            car.x < o.x+o.w &&
+            car.x+car.w > o.x &&
+            car.y < o.y+o.h &&
+            car.y+car.h > o.y
+        ){
+            obstacles=[];
+            lives--;
+            if(lives<=0) endGame();
+        }
+    });
+}
+
+/* ================== OYUN DÖNGÜ ================== */
+function loop(){
+    if(gameOver || paused) return;
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    drawRoad();
+    moveCar();
+    spawnObstacle();
+    updateObstacles();
+    checkCollision();
+    drawObstacles();
+    drawCar();
+    drawHUD();
+
+    requestAnimationFrame(loop);
+}
+
+/* ================== BAŞLAT / BİTİR ================== */
+function startGame(){
+    car.x = canvas.width/2 - car.w/2;
+    car.y = canvas.height - car.h - 40;
+    obstacles=[];
+    score=0;
+    level=1;
+    lives=3;
+    road.speed=6;
+    paused=false;
+    gameOver=false;
+    centerBtn.style.display="none";
+    loop();
+}
+
+function endGame(){
+    gameOver=true;
+    centerBtn.style.display="block";
+}
+
+centerBtn.onclick = startGame;
+startGame();
+</script>
+
+</body>
+</html>
 <!DOCTYPE html>
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Yarış Arabası Oyunu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Yarış Oyunu</title>
 
 <style>
-body{
-    margin:0;
-    background:#1a202c;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+    width:100%;
+    height:100%;
     overflow:hidden;
+    background:#111;
+    font-family:Arial,Helvetica,sans-serif;
 }
-#gameContainer{
-    position:relative;
+#gameWrapper{
+    position:fixed;
+    inset:0;
 }
 canvas{
-    background:#555;
+    width:100%;
+    height:100%;
     display:block;
+    background:#555;
 }
-#ui{
+#hud{
     position:absolute;
-    top:10px;
-    left:10px;
+    top:15px;
+    left:15px;
     color:#fff;
-    font:18px Arial;
+    font-size:18px;
+    line-height:1.5;
+    text-shadow:0 0 5px #000;
 }
-#restartBtn{
+#centerBtn{
     position:absolute;
     inset:0;
     margin:auto;
-    width:220px;
-    height:60px;
-    font-size:22px;
+    width:240px;
+    height:70px;
     border:none;
-    border-radius:12px;
+    border-radius:14px;
+    font-size:24px;
+    font-weight:bold;
     background:#16a34a;
-    color:white;
+    color:#fff;
     cursor:pointer;
     display:none;
 }
@@ -306,26 +737,40 @@ canvas{
 
 <body>
 
-<div id="gameContainer">
-    <canvas id="game" width="800" height="600"></canvas>
-    <div id="ui"></div>
-    <button id="restartBtn">Yeniden Oyna</button>
+<div id="gameWrapper">
+    <canvas id="game"></canvas>
+    <div id="hud"></div>
+    <button id="centerBtn">Yeniden Oyna</button>
 </div>
 
 <script>
+/* ================== CANVAS ================== */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-const ui = document.getElementById("ui");
-const restartBtn = document.getElementById("restartBtn");
+const hud = document.getElementById("hud");
+const centerBtn = document.getElementById("centerBtn");
 
-/* ==================== OYUN DEĞİŞKENLERİ ==================== */
-const road = { grass:100, speed:6 };
-const car = {
-    w:70, h:140,
-    x:canvas.width/2-35,
-    y:canvas.height-170,
-    speed:6
+function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+/* ================== OYUN VERİLERİ ================== */
+const road = {
+    grass: () => canvas.width * 0.15,
+    speed: 6
 };
+
+const car = {
+    w: 70,
+    h: 140,
+    x: 0,
+    y: 0,
+    speed: 7
+};
+
 let obstacles = [];
 let score = 0;
 let level = 1;
@@ -333,57 +778,185 @@ let lives = 3;
 let paused = false;
 let gameOver = false;
 
-/* ==================== GÖRSELLER ==================== */
+/* ================== GÖRSELLER ================== */
 const carImg = new Image();
 carImg.src = "https://i.hizliresim.com/s1x7krz.png";
 
-/* ==================== KONTROLLER ==================== */
+/* ================== KONTROLLER ================== */
 const keys = {};
 window.addEventListener("keydown", e=>{
     keys[e.key] = true;
-    if(e.key === "p"
+    if(e.key === "p") paused = !paused;
+});
+window.addEventListener("keyup", e=> keys[e.key]=false);
+
+/* ================== ÇİZİM ================== */
+function drawRoad(){
+    const g = road.grass();
+
+    ctx.fillStyle="#4CAF50";
+    ctx.fillRect(0,0,g,canvas.height);
+    ctx.fillRect(canvas.width-g,0,g,canvas.height);
+
+    ctx.fillStyle="#555";
+    ctx.fillRect(g,0,canvas.width-g*2,canvas.height);
+}
+
+function drawCar(){
+    ctx.drawImage(carImg,car.x,car.y,car.w,car.h);
+}
+
+function drawObstacles(){
+    ctx.fillStyle="#111";
+    obstacles.forEach(o=>{
+        ctx.fillRect(o.x,o.y,o.w,o.h);
+    });
+}
+
+function drawHUD(){
+    hud.innerHTML = `
+    🏁 Puan: ${score}<br>
+    ⭐ Seviye: ${level}<br>
+    ❤️ Can: ${lives}<br>
+    ⏸ P: Duraklat
+    `;
+}
+
+/* ================== OYUN MEKANİK ================== */
+function spawnObstacle(){
+    if(Math.random() < 0.025){
+        const g = road.grass();
+        obstacles.push({
+            x: Math.random()*(canvas.width-g*2-60)+g,
+            y: -30,
+            w: 60,
+            h: 20
+        });
+        score++;
+        if(score % 10 === 0){
+            level++;
+            road.speed += 1;
+        }
+    }
+}
+
+function moveCar(){
+    const g = road.grass();
+    if(keys["ArrowLeft"] && car.x > g) car.x -= car.speed;
+    if(keys["ArrowRight"] && car.x < canvas.width-g-car.w) car.x += car.speed;
+}
+
+function updateObstacles(){
+    obstacles.forEach(o=> o.y += road.speed);
+    obstacles = obstacles.filter(o=> o.y < canvas.height);
+}
+
+function checkCollision(){
+    obstacles.forEach(o=>{
+        if(
+            car.x < o.x+o.w &&
+            car.x+car.w > o.x &&
+            car.y < o.y+o.h &&
+            car.y+car.h > o.y
+        ){
+            obstacles=[];
+            lives--;
+            if(lives<=0) endGame();
+        }
+    });
+}
+
+/* ================== OYUN DÖNGÜ ================== */
+function loop(){
+    if(gameOver || paused) return;
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    drawRoad();
+    moveCar();
+    spawnObstacle();
+    updateObstacles();
+    checkCollision();
+    drawObstacles();
+    drawCar();
+    drawHUD();
+
+    requestAnimationFrame(loop);
+}
+
+/* ================== BAŞLAT / BİTİR ================== */
+function startGame(){
+    car.x = canvas.width/2 - car.w/2;
+    car.y = canvas.height - car.h - 40;
+    obstacles=[];
+    score=0;
+    level=1;
+    lives=3;
+    road.speed=6;
+    paused=false;
+    gameOver=false;
+    centerBtn.style.display="none";
+    loop();
+}
+
+function endGame(){
+    gameOver=true;
+    centerBtn.style.display="block";
+}
+
+centerBtn.onclick = startGame;
+startGame();
+</script>
+
+</body>
+</html>
 <!DOCTYPE html>
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Yarış Arabası Oyunu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Yarış Oyunu</title>
 
 <style>
-body{
-    margin:0;
-    background:#1a202c;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+    width:100%;
+    height:100%;
     overflow:hidden;
+    background:#111;
+    font-family:Arial,Helvetica,sans-serif;
 }
-#gameContainer{
-    position:relative;
+#gameWrapper{
+    position:fixed;
+    inset:0;
 }
 canvas{
-    background:#555;
+    width:100%;
+    height:100%;
     display:block;
+    background:#555;
 }
-#ui{
+#hud{
     position:absolute;
-    top:10px;
-    left:10px;
+    top:15px;
+    left:15px;
     color:#fff;
-    font:18px Arial;
+    font-size:18px;
+    line-height:1.5;
+    text-shadow:0 0 5px #000;
 }
-#restartBtn{
+#centerBtn{
     position:absolute;
     inset:0;
     margin:auto;
-    width:220px;
-    height:60px;
-    font-size:22px;
+    width:240px;
+    height:70px;
     border:none;
-    border-radius:12px;
+    border-radius:14px;
+    font-size:24px;
+    font-weight:bold;
     background:#16a34a;
-    color:white;
+    color:#fff;
     cursor:pointer;
     display:none;
 }
@@ -392,26 +965,40 @@ canvas{
 
 <body>
 
-<div id="gameContainer">
-    <canvas id="game" width="800" height="600"></canvas>
-    <div id="ui"></div>
-    <button id="restartBtn">Yeniden Oyna</button>
+<div id="gameWrapper">
+    <canvas id="game"></canvas>
+    <div id="hud"></div>
+    <button id="centerBtn">Yeniden Oyna</button>
 </div>
 
 <script>
+/* ================== CANVAS ================== */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-const ui = document.getElementById("ui");
-const restartBtn = document.getElementById("restartBtn");
+const hud = document.getElementById("hud");
+const centerBtn = document.getElementById("centerBtn");
 
-/* ==================== OYUN DEĞİŞKENLERİ ==================== */
-const road = { grass:100, speed:6 };
-const car = {
-    w:70, h:140,
-    x:canvas.width/2-35,
-    y:canvas.height-170,
-    speed:6
+function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+/* ================== OYUN VERİLERİ ================== */
+const road = {
+    grass: () => canvas.width * 0.15,
+    speed: 6
 };
+
+const car = {
+    w: 70,
+    h: 140,
+    x: 0,
+    y: 0,
+    speed: 7
+};
+
 let obstacles = [];
 let score = 0;
 let level = 1;
@@ -419,57 +1006,185 @@ let lives = 3;
 let paused = false;
 let gameOver = false;
 
-/* ==================== GÖRSELLER ==================== */
+/* ================== GÖRSELLER ================== */
 const carImg = new Image();
 carImg.src = "https://i.hizliresim.com/s1x7krz.png";
 
-/* ==================== KONTROLLER ==================== */
+/* ================== KONTROLLER ================== */
 const keys = {};
 window.addEventListener("keydown", e=>{
     keys[e.key] = true;
-    if(e.key === "p"
+    if(e.key === "p") paused = !paused;
+});
+window.addEventListener("keyup", e=> keys[e.key]=false);
+
+/* ================== ÇİZİM ================== */
+function drawRoad(){
+    const g = road.grass();
+
+    ctx.fillStyle="#4CAF50";
+    ctx.fillRect(0,0,g,canvas.height);
+    ctx.fillRect(canvas.width-g,0,g,canvas.height);
+
+    ctx.fillStyle="#555";
+    ctx.fillRect(g,0,canvas.width-g*2,canvas.height);
+}
+
+function drawCar(){
+    ctx.drawImage(carImg,car.x,car.y,car.w,car.h);
+}
+
+function drawObstacles(){
+    ctx.fillStyle="#111";
+    obstacles.forEach(o=>{
+        ctx.fillRect(o.x,o.y,o.w,o.h);
+    });
+}
+
+function drawHUD(){
+    hud.innerHTML = `
+    🏁 Puan: ${score}<br>
+    ⭐ Seviye: ${level}<br>
+    ❤️ Can: ${lives}<br>
+    ⏸ P: Duraklat
+    `;
+}
+
+/* ================== OYUN MEKANİK ================== */
+function spawnObstacle(){
+    if(Math.random() < 0.025){
+        const g = road.grass();
+        obstacles.push({
+            x: Math.random()*(canvas.width-g*2-60)+g,
+            y: -30,
+            w: 60,
+            h: 20
+        });
+        score++;
+        if(score % 10 === 0){
+            level++;
+            road.speed += 1;
+        }
+    }
+}
+
+function moveCar(){
+    const g = road.grass();
+    if(keys["ArrowLeft"] && car.x > g) car.x -= car.speed;
+    if(keys["ArrowRight"] && car.x < canvas.width-g-car.w) car.x += car.speed;
+}
+
+function updateObstacles(){
+    obstacles.forEach(o=> o.y += road.speed);
+    obstacles = obstacles.filter(o=> o.y < canvas.height);
+}
+
+function checkCollision(){
+    obstacles.forEach(o=>{
+        if(
+            car.x < o.x+o.w &&
+            car.x+car.w > o.x &&
+            car.y < o.y+o.h &&
+            car.y+car.h > o.y
+        ){
+            obstacles=[];
+            lives--;
+            if(lives<=0) endGame();
+        }
+    });
+}
+
+/* ================== OYUN DÖNGÜ ================== */
+function loop(){
+    if(gameOver || paused) return;
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    drawRoad();
+    moveCar();
+    spawnObstacle();
+    updateObstacles();
+    checkCollision();
+    drawObstacles();
+    drawCar();
+    drawHUD();
+
+    requestAnimationFrame(loop);
+}
+
+/* ================== BAŞLAT / BİTİR ================== */
+function startGame(){
+    car.x = canvas.width/2 - car.w/2;
+    car.y = canvas.height - car.h - 40;
+    obstacles=[];
+    score=0;
+    level=1;
+    lives=3;
+    road.speed=6;
+    paused=false;
+    gameOver=false;
+    centerBtn.style.display="none";
+    loop();
+}
+
+function endGame(){
+    gameOver=true;
+    centerBtn.style.display="block";
+}
+
+centerBtn.onclick = startGame;
+startGame();
+</script>
+
+</body>
+</html>
 <!DOCTYPE html>
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Yarış Arabası Oyunu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Yarış Oyunu</title>
 
 <style>
-body{
-    margin:0;
-    background:#1a202c;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+    width:100%;
+    height:100%;
     overflow:hidden;
+    background:#111;
+    font-family:Arial,Helvetica,sans-serif;
 }
-#gameContainer{
-    position:relative;
+#gameWrapper{
+    position:fixed;
+    inset:0;
 }
 canvas{
-    background:#555;
+    width:100%;
+    height:100%;
     display:block;
+    background:#555;
 }
-#ui{
+#hud{
     position:absolute;
-    top:10px;
-    left:10px;
+    top:15px;
+    left:15px;
     color:#fff;
-    font:18px Arial;
+    font-size:18px;
+    line-height:1.5;
+    text-shadow:0 0 5px #000;
 }
-#restartBtn{
+#centerBtn{
     position:absolute;
     inset:0;
     margin:auto;
-    width:220px;
-    height:60px;
-    font-size:22px;
+    width:240px;
+    height:70px;
     border:none;
-    border-radius:12px;
+    border-radius:14px;
+    font-size:24px;
+    font-weight:bold;
     background:#16a34a;
-    color:white;
+    color:#fff;
     cursor:pointer;
     display:none;
 }
@@ -478,26 +1193,40 @@ canvas{
 
 <body>
 
-<div id="gameContainer">
-    <canvas id="game" width="800" height="600"></canvas>
-    <div id="ui"></div>
-    <button id="restartBtn">Yeniden Oyna</button>
+<div id="gameWrapper">
+    <canvas id="game"></canvas>
+    <div id="hud"></div>
+    <button id="centerBtn">Yeniden Oyna</button>
 </div>
 
 <script>
+/* ================== CANVAS ================== */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-const ui = document.getElementById("ui");
-const restartBtn = document.getElementById("restartBtn");
+const hud = document.getElementById("hud");
+const centerBtn = document.getElementById("centerBtn");
 
-/* ==================== OYUN DEĞİŞKENLERİ ==================== */
-const road = { grass:100, speed:6 };
-const car = {
-    w:70, h:140,
-    x:canvas.width/2-35,
-    y:canvas.height-170,
-    speed:6
+function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+/* ================== OYUN VERİLERİ ================== */
+const road = {
+    grass: () => canvas.width * 0.15,
+    speed: 6
 };
+
+const car = {
+    w: 70,
+    h: 140,
+    x: 0,
+    y: 0,
+    speed: 7
+};
+
 let obstacles = [];
 let score = 0;
 let level = 1;
@@ -505,57 +1234,185 @@ let lives = 3;
 let paused = false;
 let gameOver = false;
 
-/* ==================== GÖRSELLER ==================== */
+/* ================== GÖRSELLER ================== */
 const carImg = new Image();
 carImg.src = "https://i.hizliresim.com/s1x7krz.png";
 
-/* ==================== KONTROLLER ==================== */
+/* ================== KONTROLLER ================== */
 const keys = {};
 window.addEventListener("keydown", e=>{
     keys[e.key] = true;
-    if(e.key === "p"
+    if(e.key === "p") paused = !paused;
+});
+window.addEventListener("keyup", e=> keys[e.key]=false);
+
+/* ================== ÇİZİM ================== */
+function drawRoad(){
+    const g = road.grass();
+
+    ctx.fillStyle="#4CAF50";
+    ctx.fillRect(0,0,g,canvas.height);
+    ctx.fillRect(canvas.width-g,0,g,canvas.height);
+
+    ctx.fillStyle="#555";
+    ctx.fillRect(g,0,canvas.width-g*2,canvas.height);
+}
+
+function drawCar(){
+    ctx.drawImage(carImg,car.x,car.y,car.w,car.h);
+}
+
+function drawObstacles(){
+    ctx.fillStyle="#111";
+    obstacles.forEach(o=>{
+        ctx.fillRect(o.x,o.y,o.w,o.h);
+    });
+}
+
+function drawHUD(){
+    hud.innerHTML = `
+    🏁 Puan: ${score}<br>
+    ⭐ Seviye: ${level}<br>
+    ❤️ Can: ${lives}<br>
+    ⏸ P: Duraklat
+    `;
+}
+
+/* ================== OYUN MEKANİK ================== */
+function spawnObstacle(){
+    if(Math.random() < 0.025){
+        const g = road.grass();
+        obstacles.push({
+            x: Math.random()*(canvas.width-g*2-60)+g,
+            y: -30,
+            w: 60,
+            h: 20
+        });
+        score++;
+        if(score % 10 === 0){
+            level++;
+            road.speed += 1;
+        }
+    }
+}
+
+function moveCar(){
+    const g = road.grass();
+    if(keys["ArrowLeft"] && car.x > g) car.x -= car.speed;
+    if(keys["ArrowRight"] && car.x < canvas.width-g-car.w) car.x += car.speed;
+}
+
+function updateObstacles(){
+    obstacles.forEach(o=> o.y += road.speed);
+    obstacles = obstacles.filter(o=> o.y < canvas.height);
+}
+
+function checkCollision(){
+    obstacles.forEach(o=>{
+        if(
+            car.x < o.x+o.w &&
+            car.x+car.w > o.x &&
+            car.y < o.y+o.h &&
+            car.y+car.h > o.y
+        ){
+            obstacles=[];
+            lives--;
+            if(lives<=0) endGame();
+        }
+    });
+}
+
+/* ================== OYUN DÖNGÜ ================== */
+function loop(){
+    if(gameOver || paused) return;
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    drawRoad();
+    moveCar();
+    spawnObstacle();
+    updateObstacles();
+    checkCollision();
+    drawObstacles();
+    drawCar();
+    drawHUD();
+
+    requestAnimationFrame(loop);
+}
+
+/* ================== BAŞLAT / BİTİR ================== */
+function startGame(){
+    car.x = canvas.width/2 - car.w/2;
+    car.y = canvas.height - car.h - 40;
+    obstacles=[];
+    score=0;
+    level=1;
+    lives=3;
+    road.speed=6;
+    paused=false;
+    gameOver=false;
+    centerBtn.style.display="none";
+    loop();
+}
+
+function endGame(){
+    gameOver=true;
+    centerBtn.style.display="block";
+}
+
+centerBtn.onclick = startGame;
+startGame();
+</script>
+
+</body>
+</html>
 <!DOCTYPE html>
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Yarış Arabası Oyunu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Yarış Oyunu</title>
 
 <style>
-body{
-    margin:0;
-    background:#1a202c;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+    width:100%;
+    height:100%;
     overflow:hidden;
+    background:#111;
+    font-family:Arial,Helvetica,sans-serif;
 }
-#gameContainer{
-    position:relative;
+#gameWrapper{
+    position:fixed;
+    inset:0;
 }
 canvas{
-    background:#555;
+    width:100%;
+    height:100%;
     display:block;
+    background:#555;
 }
-#ui{
+#hud{
     position:absolute;
-    top:10px;
-    left:10px;
+    top:15px;
+    left:15px;
     color:#fff;
-    font:18px Arial;
+    font-size:18px;
+    line-height:1.5;
+    text-shadow:0 0 5px #000;
 }
-#restartBtn{
+#centerBtn{
     position:absolute;
     inset:0;
     margin:auto;
-    width:220px;
-    height:60px;
-    font-size:22px;
+    width:240px;
+    height:70px;
     border:none;
-    border-radius:12px;
+    border-radius:14px;
+    font-size:24px;
+    font-weight:bold;
     background:#16a34a;
-    color:white;
+    color:#fff;
     cursor:pointer;
     display:none;
 }
@@ -564,26 +1421,40 @@ canvas{
 
 <body>
 
-<div id="gameContainer">
-    <canvas id="game" width="800" height="600"></canvas>
-    <div id="ui"></div>
-    <button id="restartBtn">Yeniden Oyna</button>
+<div id="gameWrapper">
+    <canvas id="game"></canvas>
+    <div id="hud"></div>
+    <button id="centerBtn">Yeniden Oyna</button>
 </div>
 
 <script>
+/* ================== CANVAS ================== */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-const ui = document.getElementById("ui");
-const restartBtn = document.getElementById("restartBtn");
+const hud = document.getElementById("hud");
+const centerBtn = document.getElementById("centerBtn");
 
-/* ==================== OYUN DEĞİŞKENLERİ ==================== */
-const road = { grass:100, speed:6 };
-const car = {
-    w:70, h:140,
-    x:canvas.width/2-35,
-    y:canvas.height-170,
-    speed:6
+function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+/* ================== OYUN VERİLERİ ================== */
+const road = {
+    grass: () => canvas.width * 0.15,
+    speed: 6
 };
+
+const car = {
+    w: 70,
+    h: 140,
+    x: 0,
+    y: 0,
+    speed: 7
+};
+
 let obstacles = [];
 let score = 0;
 let level = 1;
@@ -591,57 +1462,185 @@ let lives = 3;
 let paused = false;
 let gameOver = false;
 
-/* ==================== GÖRSELLER ==================== */
+/* ================== GÖRSELLER ================== */
 const carImg = new Image();
 carImg.src = "https://i.hizliresim.com/s1x7krz.png";
 
-/* ==================== KONTROLLER ==================== */
+/* ================== KONTROLLER ================== */
 const keys = {};
 window.addEventListener("keydown", e=>{
     keys[e.key] = true;
-    if(e.key === "p"
+    if(e.key === "p") paused = !paused;
+});
+window.addEventListener("keyup", e=> keys[e.key]=false);
+
+/* ================== ÇİZİM ================== */
+function drawRoad(){
+    const g = road.grass();
+
+    ctx.fillStyle="#4CAF50";
+    ctx.fillRect(0,0,g,canvas.height);
+    ctx.fillRect(canvas.width-g,0,g,canvas.height);
+
+    ctx.fillStyle="#555";
+    ctx.fillRect(g,0,canvas.width-g*2,canvas.height);
+}
+
+function drawCar(){
+    ctx.drawImage(carImg,car.x,car.y,car.w,car.h);
+}
+
+function drawObstacles(){
+    ctx.fillStyle="#111";
+    obstacles.forEach(o=>{
+        ctx.fillRect(o.x,o.y,o.w,o.h);
+    });
+}
+
+function drawHUD(){
+    hud.innerHTML = `
+    🏁 Puan: ${score}<br>
+    ⭐ Seviye: ${level}<br>
+    ❤️ Can: ${lives}<br>
+    ⏸ P: Duraklat
+    `;
+}
+
+/* ================== OYUN MEKANİK ================== */
+function spawnObstacle(){
+    if(Math.random() < 0.025){
+        const g = road.grass();
+        obstacles.push({
+            x: Math.random()*(canvas.width-g*2-60)+g,
+            y: -30,
+            w: 60,
+            h: 20
+        });
+        score++;
+        if(score % 10 === 0){
+            level++;
+            road.speed += 1;
+        }
+    }
+}
+
+function moveCar(){
+    const g = road.grass();
+    if(keys["ArrowLeft"] && car.x > g) car.x -= car.speed;
+    if(keys["ArrowRight"] && car.x < canvas.width-g-car.w) car.x += car.speed;
+}
+
+function updateObstacles(){
+    obstacles.forEach(o=> o.y += road.speed);
+    obstacles = obstacles.filter(o=> o.y < canvas.height);
+}
+
+function checkCollision(){
+    obstacles.forEach(o=>{
+        if(
+            car.x < o.x+o.w &&
+            car.x+car.w > o.x &&
+            car.y < o.y+o.h &&
+            car.y+car.h > o.y
+        ){
+            obstacles=[];
+            lives--;
+            if(lives<=0) endGame();
+        }
+    });
+}
+
+/* ================== OYUN DÖNGÜ ================== */
+function loop(){
+    if(gameOver || paused) return;
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    drawRoad();
+    moveCar();
+    spawnObstacle();
+    updateObstacles();
+    checkCollision();
+    drawObstacles();
+    drawCar();
+    drawHUD();
+
+    requestAnimationFrame(loop);
+}
+
+/* ================== BAŞLAT / BİTİR ================== */
+function startGame(){
+    car.x = canvas.width/2 - car.w/2;
+    car.y = canvas.height - car.h - 40;
+    obstacles=[];
+    score=0;
+    level=1;
+    lives=3;
+    road.speed=6;
+    paused=false;
+    gameOver=false;
+    centerBtn.style.display="none";
+    loop();
+}
+
+function endGame(){
+    gameOver=true;
+    centerBtn.style.display="block";
+}
+
+centerBtn.onclick = startGame;
+startGame();
+</script>
+
+</body>
+</html>
 <!DOCTYPE html>
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Yarış Arabası Oyunu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Yarış Oyunu</title>
 
 <style>
-body{
-    margin:0;
-    background:#1a202c;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+    width:100%;
+    height:100%;
     overflow:hidden;
+    background:#111;
+    font-family:Arial,Helvetica,sans-serif;
 }
-#gameContainer{
-    position:relative;
+#gameWrapper{
+    position:fixed;
+    inset:0;
 }
 canvas{
-    background:#555;
+    width:100%;
+    height:100%;
     display:block;
+    background:#555;
 }
-#ui{
+#hud{
     position:absolute;
-    top:10px;
-    left:10px;
+    top:15px;
+    left:15px;
     color:#fff;
-    font:18px Arial;
+    font-size:18px;
+    line-height:1.5;
+    text-shadow:0 0 5px #000;
 }
-#restartBtn{
+#centerBtn{
     position:absolute;
     inset:0;
     margin:auto;
-    width:220px;
-    height:60px;
-    font-size:22px;
+    width:240px;
+    height:70px;
     border:none;
-    border-radius:12px;
+    border-radius:14px;
+    font-size:24px;
+    font-weight:bold;
     background:#16a34a;
-    color:white;
+    color:#fff;
     cursor:pointer;
     display:none;
 }
@@ -650,26 +1649,40 @@ canvas{
 
 <body>
 
-<div id="gameContainer">
-    <canvas id="game" width="800" height="600"></canvas>
-    <div id="ui"></div>
-    <button id="restartBtn">Yeniden Oyna</button>
+<div id="gameWrapper">
+    <canvas id="game"></canvas>
+    <div id="hud"></div>
+    <button id="centerBtn">Yeniden Oyna</button>
 </div>
 
 <script>
+/* ================== CANVAS ================== */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-const ui = document.getElementById("ui");
-const restartBtn = document.getElementById("restartBtn");
+const hud = document.getElementById("hud");
+const centerBtn = document.getElementById("centerBtn");
 
-/* ==================== OYUN DEĞİŞKENLERİ ==================== */
-const road = { grass:100, speed:6 };
-const car = {
-    w:70, h:140,
-    x:canvas.width/2-35,
-    y:canvas.height-170,
-    speed:6
+function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+/* ================== OYUN VERİLERİ ================== */
+const road = {
+    grass: () => canvas.width * 0.15,
+    speed: 6
 };
+
+const car = {
+    w: 70,
+    h: 140,
+    x: 0,
+    y: 0,
+    speed: 7
+};
+
 let obstacles = [];
 let score = 0;
 let level = 1;
@@ -677,57 +1690,185 @@ let lives = 3;
 let paused = false;
 let gameOver = false;
 
-/* ==================== GÖRSELLER ==================== */
+/* ================== GÖRSELLER ================== */
 const carImg = new Image();
 carImg.src = "https://i.hizliresim.com/s1x7krz.png";
 
-/* ==================== KONTROLLER ==================== */
+/* ================== KONTROLLER ================== */
 const keys = {};
 window.addEventListener("keydown", e=>{
     keys[e.key] = true;
-    if(e.key === "p"
+    if(e.key === "p") paused = !paused;
+});
+window.addEventListener("keyup", e=> keys[e.key]=false);
+
+/* ================== ÇİZİM ================== */
+function drawRoad(){
+    const g = road.grass();
+
+    ctx.fillStyle="#4CAF50";
+    ctx.fillRect(0,0,g,canvas.height);
+    ctx.fillRect(canvas.width-g,0,g,canvas.height);
+
+    ctx.fillStyle="#555";
+    ctx.fillRect(g,0,canvas.width-g*2,canvas.height);
+}
+
+function drawCar(){
+    ctx.drawImage(carImg,car.x,car.y,car.w,car.h);
+}
+
+function drawObstacles(){
+    ctx.fillStyle="#111";
+    obstacles.forEach(o=>{
+        ctx.fillRect(o.x,o.y,o.w,o.h);
+    });
+}
+
+function drawHUD(){
+    hud.innerHTML = `
+    🏁 Puan: ${score}<br>
+    ⭐ Seviye: ${level}<br>
+    ❤️ Can: ${lives}<br>
+    ⏸ P: Duraklat
+    `;
+}
+
+/* ================== OYUN MEKANİK ================== */
+function spawnObstacle(){
+    if(Math.random() < 0.025){
+        const g = road.grass();
+        obstacles.push({
+            x: Math.random()*(canvas.width-g*2-60)+g,
+            y: -30,
+            w: 60,
+            h: 20
+        });
+        score++;
+        if(score % 10 === 0){
+            level++;
+            road.speed += 1;
+        }
+    }
+}
+
+function moveCar(){
+    const g = road.grass();
+    if(keys["ArrowLeft"] && car.x > g) car.x -= car.speed;
+    if(keys["ArrowRight"] && car.x < canvas.width-g-car.w) car.x += car.speed;
+}
+
+function updateObstacles(){
+    obstacles.forEach(o=> o.y += road.speed);
+    obstacles = obstacles.filter(o=> o.y < canvas.height);
+}
+
+function checkCollision(){
+    obstacles.forEach(o=>{
+        if(
+            car.x < o.x+o.w &&
+            car.x+car.w > o.x &&
+            car.y < o.y+o.h &&
+            car.y+car.h > o.y
+        ){
+            obstacles=[];
+            lives--;
+            if(lives<=0) endGame();
+        }
+    });
+}
+
+/* ================== OYUN DÖNGÜ ================== */
+function loop(){
+    if(gameOver || paused) return;
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    drawRoad();
+    moveCar();
+    spawnObstacle();
+    updateObstacles();
+    checkCollision();
+    drawObstacles();
+    drawCar();
+    drawHUD();
+
+    requestAnimationFrame(loop);
+}
+
+/* ================== BAŞLAT / BİTİR ================== */
+function startGame(){
+    car.x = canvas.width/2 - car.w/2;
+    car.y = canvas.height - car.h - 40;
+    obstacles=[];
+    score=0;
+    level=1;
+    lives=3;
+    road.speed=6;
+    paused=false;
+    gameOver=false;
+    centerBtn.style.display="none";
+    loop();
+}
+
+function endGame(){
+    gameOver=true;
+    centerBtn.style.display="block";
+}
+
+centerBtn.onclick = startGame;
+startGame();
+</script>
+
+</body>
+</html>
 <!DOCTYPE html>
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Yarış Arabası Oyunu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Yarış Oyunu</title>
 
 <style>
-body{
-    margin:0;
-    background:#1a202c;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+    width:100%;
+    height:100%;
     overflow:hidden;
+    background:#111;
+    font-family:Arial,Helvetica,sans-serif;
 }
-#gameContainer{
-    position:relative;
+#gameWrapper{
+    position:fixed;
+    inset:0;
 }
 canvas{
-    background:#555;
+    width:100%;
+    height:100%;
     display:block;
+    background:#555;
 }
-#ui{
+#hud{
     position:absolute;
-    top:10px;
-    left:10px;
+    top:15px;
+    left:15px;
     color:#fff;
-    font:18px Arial;
+    font-size:18px;
+    line-height:1.5;
+    text-shadow:0 0 5px #000;
 }
-#restartBtn{
+#centerBtn{
     position:absolute;
     inset:0;
     margin:auto;
-    width:220px;
-    height:60px;
-    font-size:22px;
+    width:240px;
+    height:70px;
     border:none;
-    border-radius:12px;
+    border-radius:14px;
+    font-size:24px;
+    font-weight:bold;
     background:#16a34a;
-    color:white;
+    color:#fff;
     cursor:pointer;
     display:none;
 }
@@ -736,26 +1877,40 @@ canvas{
 
 <body>
 
-<div id="gameContainer">
-    <canvas id="game" width="800" height="600"></canvas>
-    <div id="ui"></div>
-    <button id="restartBtn">Yeniden Oyna</button>
+<div id="gameWrapper">
+    <canvas id="game"></canvas>
+    <div id="hud"></div>
+    <button id="centerBtn">Yeniden Oyna</button>
 </div>
 
 <script>
+/* ================== CANVAS ================== */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-const ui = document.getElementById("ui");
-const restartBtn = document.getElementById("restartBtn");
+const hud = document.getElementById("hud");
+const centerBtn = document.getElementById("centerBtn");
 
-/* ==================== OYUN DEĞİŞKENLERİ ==================== */
-const road = { grass:100, speed:6 };
-const car = {
-    w:70, h:140,
-    x:canvas.width/2-35,
-    y:canvas.height-170,
-    speed:6
+function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+/* ================== OYUN VERİLERİ ================== */
+const road = {
+    grass: () => canvas.width * 0.15,
+    speed: 6
 };
+
+const car = {
+    w: 70,
+    h: 140,
+    x: 0,
+    y: 0,
+    speed: 7
+};
+
 let obstacles = [];
 let score = 0;
 let level = 1;
@@ -763,57 +1918,185 @@ let lives = 3;
 let paused = false;
 let gameOver = false;
 
-/* ==================== GÖRSELLER ==================== */
+/* ================== GÖRSELLER ================== */
 const carImg = new Image();
 carImg.src = "https://i.hizliresim.com/s1x7krz.png";
 
-/* ==================== KONTROLLER ==================== */
+/* ================== KONTROLLER ================== */
 const keys = {};
 window.addEventListener("keydown", e=>{
     keys[e.key] = true;
-    if(e.key === "p"
+    if(e.key === "p") paused = !paused;
+});
+window.addEventListener("keyup", e=> keys[e.key]=false);
+
+/* ================== ÇİZİM ================== */
+function drawRoad(){
+    const g = road.grass();
+
+    ctx.fillStyle="#4CAF50";
+    ctx.fillRect(0,0,g,canvas.height);
+    ctx.fillRect(canvas.width-g,0,g,canvas.height);
+
+    ctx.fillStyle="#555";
+    ctx.fillRect(g,0,canvas.width-g*2,canvas.height);
+}
+
+function drawCar(){
+    ctx.drawImage(carImg,car.x,car.y,car.w,car.h);
+}
+
+function drawObstacles(){
+    ctx.fillStyle="#111";
+    obstacles.forEach(o=>{
+        ctx.fillRect(o.x,o.y,o.w,o.h);
+    });
+}
+
+function drawHUD(){
+    hud.innerHTML = `
+    🏁 Puan: ${score}<br>
+    ⭐ Seviye: ${level}<br>
+    ❤️ Can: ${lives}<br>
+    ⏸ P: Duraklat
+    `;
+}
+
+/* ================== OYUN MEKANİK ================== */
+function spawnObstacle(){
+    if(Math.random() < 0.025){
+        const g = road.grass();
+        obstacles.push({
+            x: Math.random()*(canvas.width-g*2-60)+g,
+            y: -30,
+            w: 60,
+            h: 20
+        });
+        score++;
+        if(score % 10 === 0){
+            level++;
+            road.speed += 1;
+        }
+    }
+}
+
+function moveCar(){
+    const g = road.grass();
+    if(keys["ArrowLeft"] && car.x > g) car.x -= car.speed;
+    if(keys["ArrowRight"] && car.x < canvas.width-g-car.w) car.x += car.speed;
+}
+
+function updateObstacles(){
+    obstacles.forEach(o=> o.y += road.speed);
+    obstacles = obstacles.filter(o=> o.y < canvas.height);
+}
+
+function checkCollision(){
+    obstacles.forEach(o=>{
+        if(
+            car.x < o.x+o.w &&
+            car.x+car.w > o.x &&
+            car.y < o.y+o.h &&
+            car.y+car.h > o.y
+        ){
+            obstacles=[];
+            lives--;
+            if(lives<=0) endGame();
+        }
+    });
+}
+
+/* ================== OYUN DÖNGÜ ================== */
+function loop(){
+    if(gameOver || paused) return;
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    drawRoad();
+    moveCar();
+    spawnObstacle();
+    updateObstacles();
+    checkCollision();
+    drawObstacles();
+    drawCar();
+    drawHUD();
+
+    requestAnimationFrame(loop);
+}
+
+/* ================== BAŞLAT / BİTİR ================== */
+function startGame(){
+    car.x = canvas.width/2 - car.w/2;
+    car.y = canvas.height - car.h - 40;
+    obstacles=[];
+    score=0;
+    level=1;
+    lives=3;
+    road.speed=6;
+    paused=false;
+    gameOver=false;
+    centerBtn.style.display="none";
+    loop();
+}
+
+function endGame(){
+    gameOver=true;
+    centerBtn.style.display="block";
+}
+
+centerBtn.onclick = startGame;
+startGame();
+</script>
+
+</body>
+</html>
 <!DOCTYPE html>
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Yarış Arabası Oyunu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Yarış Oyunu</title>
 
 <style>
-body{
-    margin:0;
-    background:#1a202c;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+    width:100%;
+    height:100%;
     overflow:hidden;
+    background:#111;
+    font-family:Arial,Helvetica,sans-serif;
 }
-#gameContainer{
-    position:relative;
+#gameWrapper{
+    position:fixed;
+    inset:0;
 }
 canvas{
-    background:#555;
+    width:100%;
+    height:100%;
     display:block;
+    background:#555;
 }
-#ui{
+#hud{
     position:absolute;
-    top:10px;
-    left:10px;
+    top:15px;
+    left:15px;
     color:#fff;
-    font:18px Arial;
+    font-size:18px;
+    line-height:1.5;
+    text-shadow:0 0 5px #000;
 }
-#restartBtn{
+#centerBtn{
     position:absolute;
     inset:0;
     margin:auto;
-    width:220px;
-    height:60px;
-    font-size:22px;
+    width:240px;
+    height:70px;
     border:none;
-    border-radius:12px;
+    border-radius:14px;
+    font-size:24px;
+    font-weight:bold;
     background:#16a34a;
-    color:white;
+    color:#fff;
     cursor:pointer;
     display:none;
 }
@@ -822,26 +2105,40 @@ canvas{
 
 <body>
 
-<div id="gameContainer">
-    <canvas id="game" width="800" height="600"></canvas>
-    <div id="ui"></div>
-    <button id="restartBtn">Yeniden Oyna</button>
+<div id="gameWrapper">
+    <canvas id="game"></canvas>
+    <div id="hud"></div>
+    <button id="centerBtn">Yeniden Oyna</button>
 </div>
 
 <script>
+/* ================== CANVAS ================== */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-const ui = document.getElementById("ui");
-const restartBtn = document.getElementById("restartBtn");
+const hud = document.getElementById("hud");
+const centerBtn = document.getElementById("centerBtn");
 
-/* ==================== OYUN DEĞİŞKENLERİ ==================== */
-const road = { grass:100, speed:6 };
-const car = {
-    w:70, h:140,
-    x:canvas.width/2-35,
-    y:canvas.height-170,
-    speed:6
+function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+/* ================== OYUN VERİLERİ ================== */
+const road = {
+    grass: () => canvas.width * 0.15,
+    speed: 6
 };
+
+const car = {
+    w: 70,
+    h: 140,
+    x: 0,
+    y: 0,
+    speed: 7
+};
+
 let obstacles = [];
 let score = 0;
 let level = 1;
@@ -849,12 +2146,135 @@ let lives = 3;
 let paused = false;
 let gameOver = false;
 
-/* ==================== GÖRSELLER ==================== */
+/* ================== GÖRSELLER ================== */
 const carImg = new Image();
 carImg.src = "https://i.hizliresim.com/s1x7krz.png";
 
-/* ==================== KONTROLLER ==================== */
+/* ================== KONTROLLER ================== */
 const keys = {};
 window.addEventListener("keydown", e=>{
     keys[e.key] = true;
-    if(e.key === "p"
+    if(e.key === "p") paused = !paused;
+});
+window.addEventListener("keyup", e=> keys[e.key]=false);
+
+/* ================== ÇİZİM ================== */
+function drawRoad(){
+    const g = road.grass();
+
+    ctx.fillStyle="#4CAF50";
+    ctx.fillRect(0,0,g,canvas.height);
+    ctx.fillRect(canvas.width-g,0,g,canvas.height);
+
+    ctx.fillStyle="#555";
+    ctx.fillRect(g,0,canvas.width-g*2,canvas.height);
+}
+
+function drawCar(){
+    ctx.drawImage(carImg,car.x,car.y,car.w,car.h);
+}
+
+function drawObstacles(){
+    ctx.fillStyle="#111";
+    obstacles.forEach(o=>{
+        ctx.fillRect(o.x,o.y,o.w,o.h);
+    });
+}
+
+function drawHUD(){
+    hud.innerHTML = `
+    🏁 Puan: ${score}<br>
+    ⭐ Seviye: ${level}<br>
+    ❤️ Can: ${lives}<br>
+    ⏸ P: Duraklat
+    `;
+}
+
+/* ================== OYUN MEKANİK ================== */
+function spawnObstacle(){
+    if(Math.random() < 0.025){
+        const g = road.grass();
+        obstacles.push({
+            x: Math.random()*(canvas.width-g*2-60)+g,
+            y: -30,
+            w: 60,
+            h: 20
+        });
+        score++;
+        if(score % 10 === 0){
+            level++;
+            road.speed += 1;
+        }
+    }
+}
+
+function moveCar(){
+    const g = road.grass();
+    if(keys["ArrowLeft"] && car.x > g) car.x -= car.speed;
+    if(keys["ArrowRight"] && car.x < canvas.width-g-car.w) car.x += car.speed;
+}
+
+function updateObstacles(){
+    obstacles.forEach(o=> o.y += road.speed);
+    obstacles = obstacles.filter(o=> o.y < canvas.height);
+}
+
+function checkCollision(){
+    obstacles.forEach(o=>{
+        if(
+            car.x < o.x+o.w &&
+            car.x+car.w > o.x &&
+            car.y < o.y+o.h &&
+            car.y+car.h > o.y
+        ){
+            obstacles=[];
+            lives--;
+            if(lives<=0) endGame();
+        }
+    });
+}
+
+/* ================== OYUN DÖNGÜ ================== */
+function loop(){
+    if(gameOver || paused) return;
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    drawRoad();
+    moveCar();
+    spawnObstacle();
+    updateObstacles();
+    checkCollision();
+    drawObstacles();
+    drawCar();
+    drawHUD();
+
+    requestAnimationFrame(loop);
+}
+
+/* ================== BAŞLAT / BİTİR ================== */
+function startGame(){
+    car.x = canvas.width/2 - car.w/2;
+    car.y = canvas.height - car.h - 40;
+    obstacles=[];
+    score=0;
+    level=1;
+    lives=3;
+    road.speed=6;
+    paused=false;
+    gameOver=false;
+    centerBtn.style.display="none";
+    loop();
+}
+
+function endGame(){
+    gameOver=true;
+    centerBtn.style.display="block";
+}
+
+centerBtn.onclick = startGame;
+startGame();
+</script>
+
+</body>
+</html>
