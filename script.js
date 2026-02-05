@@ -1,83 +1,119 @@
-const words = ["JAVASCRIPT", "TEKNOLOJI", "YAZILIM", "PROGRAMLAMA", "KLAVYE", "EKRAN", "KODLAMA"];
-let selectedWord = "";
-let guessedLetters = [];
-let wrongAttempts = 0;
-const maxAttempts = 6;
+// Canvas elementini ve 2D render context'ini al
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
 
-const wordDisplay = document.getElementById("wordDisplay");
-const keyboard = document.getElementById("keyboard");
-const message = document.getElementById("message");
-const resetBtn = document.getElementById("resetBtn");
-const figureParts = document.querySelectorAll(".figure-part");
+// Oyun ayarları
+const GAME_WIDTH = canvas.width;
+const GAME_HEIGHT = canvas.height;
 
-// Oyunu Başlat
-function initGame() {
-    selectedWord = words[Math.floor(Math.random() * words.length)];
-    guessedLetters = [];
-    wrongAttempts = 0;
-    
-    message.textContent = "";
-    figureParts.forEach(part => part.style.display = "none");
-    
-    generateKeyboard();
-    updateDisplay();
-}
+// HTML element referansları
+const playerHealthDisplay = document.getElementById('playerHealth');
+const scoreDisplay = document.getElementById('scoreDisplay');
+const startGameBtn = document.getElementById('startGameBtn');
 
-// Klavyeyi Oluştur (Türkçe karakterler dahil)
-function generateKeyboard() {
-    const letters = "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ";
-    keyboard.innerHTML = "";
-    letters.split("").forEach(letter => {
-        const btn = document.createElement("button");
-        btn.textContent = letter;
-        btn.onclick = () => handleGuess(letter, btn);
-        keyboard.appendChild(btn);
-    });
-}
+// Oyun durumu değişkenleri
+let gameRunning = false;
+let score = 0;
+let playerHealth = 100;
 
-// Tahmin Kontrolü
-function handleGuess(letter, btn) {
-    btn.disabled = true;
-    if (selectedWord.includes(letter)) {
-        guessedLetters.push(letter);
-        btn.style.background = "#28a745";
-    } else {
-        wrongAttempts++;
-        btn.style.background = "#dc3545";
-        figureParts[wrongAttempts - 1].style.display = "block";
+// Klavye tuşları durumu
+const keys = {
+    ArrowUp: false,
+    ArrowDown: false,
+    ArrowLeft: false,
+    ArrowRight: false,
+    Space: false // Ateş etmek için
+};
+
+// Fare durumu
+const mouse = {
+    x: 0,
+    y: 0,
+    clicked: false
+};
+
+// --- Oyun Nesneleri (Objeler) ---
+// Oyuncu tankı
+const player = {
+    x: GAME_WIDTH / 2,
+    y: GAME_HEIGHT / 2,
+    size: 40,
+    speed: 3,
+    angle: 0, // Radyan cinsinden
+    color: 'green',
+    turretColor: 'darkgreen',
+    fireCooldown: 0, // Atış bekleme süresi
+    maxFireCooldown: 20 // Atışlar arası frame sayısı
+};
+
+const bullets = []; // Mermi dizisi
+const enemies = []; // Düşman tankları dizisi
+const explosions = []; // Patlama efektleri
+
+// --- Event Listeners (Olay Dinleyicileri) ---
+window.addEventListener('keydown', (e) => {
+    if (keys.hasOwnProperty(e.code)) {
+        keys[e.code] = true;
     }
-    
-    updateDisplay();
-    checkGameStatus();
-}
+});
 
-// Ekranı Güncelle
-function updateDisplay() {
-    wordDisplay.textContent = selectedWord
-        .split("")
-        .map(letter => (guessedLetters.includes(letter) ? letter : "_"))
-        .join(" ");
-}
-
-// Kazanma/Kaybetme Durumu
-function checkGameStatus() {
-    if (wrongAttempts === maxAttempts) {
-        message.textContent = `Kaybettin! Kelime: ${selectedWord}`;
-        message.style.color = "#ff4b2b";
-        disableAllButtons();
-    } else if (!wordDisplay.textContent.includes("_")) {
-        message.textContent = "Tebrikler, Kazandın! 🎉";
-        message.style.color = "#00d2ff";
-        disableAllButtons();
+window.addEventListener('keyup', (e) => {
+    if (keys.hasOwnProperty(e.code)) {
+        keys[e.code] = false;
     }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    // Canvas'ın sayfadaki konumunu hesaba kat
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = e.clientX - rect.left;
+    mouse.y = e.clientY - rect.top;
+});
+
+canvas.addEventListener('mousedown', (e) => {
+    if (e.button === 0) { // Sol tık
+        mouse.clicked = true;
+    }
+});
+
+canvas.addEventListener('mouseup', (e) => {
+    if (e.button === 0) {
+        mouse.clicked = false;
+    }
+});
+
+startGameBtn.addEventListener('click', () => {
+    if (!gameRunning) {
+        resetGame(); // Oyunu sıfırla
+        startGameBtn.style.display = 'none'; // Butonu gizle
+        gameRunning = true;
+        gameLoop(); // Oyun döngüsünü başlat
+    }
+});
+
+// --- Yardımcı Fonksiyonlar ---
+function distance(x1, y1, x2, y2) {
+    return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 }
 
-function disableAllButtons() {
-    const buttons = document.querySelectorAll(".keyboard button");
-    buttons.forEach(btn => btn.disabled = true);
+function getRandomInt(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-resetBtn.addEventListener("click", initGame);
-
-// İlk başlatma
-initGame();
+// --- Oyun Döngüsü ve Başlangıç ---
+function resetGame() {
+    score = 0;
+    playerHealth = 100;
+    player.x = GAME_WIDTH / 2;
+    player.y = GAME_HEIGHT / 2;
+    player.angle = 0;
+    player.fireCooldown = 0;
+    bullets.length = 0; // Diziyi sıfırla
+    enemies.length = 0; // Diziyi sıfırla
+    explosions.length = 0; // Diziyi sıfırla
+    playerHealthDisplay.textContent = `Can: ${playerHealth}`;
+    scoreDisplay.textContent = `Skor: ${score}`;
+    spawnEnemy(); // İlk düşmanı oluştur
+}
