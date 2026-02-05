@@ -1,85 +1,63 @@
-:root {
-    --primary: #00d2ff;
-    --danger: #ff4b2b;
-    --bg: #1a1a2e;
-    --text: #ffffff;
-}
-
 body {
-    background-color: var(--bg);
-    color: var(--text);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    overflow: hidden; /* Kaydırma çubuklarını engelle */
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
-    margin: 0;
+    min-height: 100vh;
+    background-color: #2c3e50; /* Koyu arka plan */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #ecf0f1;
 }
 
 .game-container {
     text-align: center;
-    background: #16213e;
-    padding: 2rem;
-    border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    max-width: 500px;
-    width: 90%;
+    background-color: #34495e;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
-.figure-container {
-    fill: transparent;
-    stroke: var(--text);
-    stroke-width: 4px;
-    stroke-linecap: round;
+h1 {
+    color: #ecf0f1;
+    margin-bottom: 20px;
 }
 
-.figure-part {
-    display: none; /* Başlangıçta gizli */
+canvas {
+    background-color: #556b2f; /* Çimen rengi */
+    border: 2px solid #2c3e50;
+    display: block; /* Kenar boşluklarını kaldır */
+    margin: 0 auto;
 }
 
-.word-display {
-    font-size: 2.5rem;
-    letter-spacing: 0.5rem;
-    margin: 20px 0;
-    min-height: 3.5rem;
+.info-bar {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 1.2em;
+    font-weight: bold;
 }
 
-.keyboard {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
-    gap: 8px;
-    margin-top: 20px;
+.health-bar {
+    color: #e74c3c; /* Kırmızı can */
 }
 
-button {
-    padding: 10px;
-    border: none;
-    border-radius: 5px;
-    background: #0f3460;
+.score-display {
+    color: #2ecc71; /* Yeşil skor */
+}
+
+.start-button {
+    background-color: #2ecc71;
     color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1.2em;
+    border-radius: 5px;
     cursor: pointer;
-    font-weight: bold;
-    transition: 0.3s;
-}
-
-button:hover:not(:disabled) {
-    background: var(--primary);
-}
-
-button:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
-.reset-btn {
     margin-top: 20px;
-    padding: 12px 25px;
-    background: var(--primary);
-    width: 100%;
+    transition: background-color 0.3s ease;
 }
 
-.message {
-    height: 30px;
-    margin-top: 15px;
-    font-weight: bold;
+.start-button:hover {
+    background-color: #27ae60;
 }
