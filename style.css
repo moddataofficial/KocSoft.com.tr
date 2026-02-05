@@ -1,0 +1,85 @@
+:root {
+    --primary: #00d2ff;
+    --danger: #ff4b2b;
+    --bg: #1a1a2e;
+    --text: #ffffff;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.game-container {
+    text-align: center;
+    background: #16213e;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    max-width: 500px;
+    width: 90%;
+}
+
+.figure-container {
+    fill: transparent;
+    stroke: var(--text);
+    stroke-width: 4px;
+    stroke-linecap: round;
+}
+
+.figure-part {
+    display: none; /* Başlangıçta gizli */
+}
+
+.word-display {
+    font-size: 2.5rem;
+    letter-spacing: 0.5rem;
+    margin: 20px 0;
+    min-height: 3.5rem;
+}
+
+.keyboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
+    gap: 8px;
+    margin-top: 20px;
+}
+
+button {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background: #0f3460;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+button:hover:not(:disabled) {
+    background: var(--primary);
+}
+
+button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.reset-btn {
+    margin-top: 20px;
+    padding: 12px 25px;
+    background: var(--primary);
+    width: 100%;
+}
+
+.message {
+    height: 30px;
+    margin-top: 15px;
+    font-weight: bold;
+}
