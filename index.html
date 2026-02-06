@@ -2,8 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iron Steel: Tank Arena</title>
+    <title>Iron Steel: Tank Evolution</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,6 +10,13 @@
         <div class="stat-box">
             <div class="label">ZIRH</div>
             <div class="bar-container"><div id="hp-bar" class="bar"></div></div>
+            <div id="level-text" style="font-size: 12px; margin-top: 5px;">SEVİYE: 1</div>
+        </div>
+        <div id="upgrade-menu" class="hidden">
+            <h3>GELİŞTİRME SEÇ!</h3>
+            <button onclick="upgrade('multi')">ÇOKLU ATIŞ</button>
+            <button onclick="upgrade('speed')">HIZLI MOTOR</button>
+            <button onclick="upgrade('armor')">TAMİR ET</button>
         </div>
         <div class="stat-box">
             <div class="label">SKOR</div>
