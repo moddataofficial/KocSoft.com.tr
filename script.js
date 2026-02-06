@@ -1,119 +1,181 @@
-// Canvas elementini ve 2D render context'ini al
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+const bulletCounter = document.getElementById('bulletCount');
 
-// Oyun ayarları
-const GAME_WIDTH = canvas.width;
-const GAME_HEIGHT = canvas.height;
+// Ekran boyutlarını ayarla
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
 
-// HTML element referansları
-const playerHealthDisplay = document.getElementById('playerHealth');
-const scoreDisplay = document.getElementById('scoreDisplay');
-const startGameBtn = document.getElementById('startGameBtn');
+// Oyun Değişkenleri
+const keys = {};
+const mouse = { x: 0, y: 0 };
+let particles = [];
+let screenShake = 0;
 
-// Oyun durumu değişkenleri
-let gameRunning = false;
-let score = 0;
-let playerHealth = 100;
-
-// Klavye tuşları durumu
-const keys = {
-    ArrowUp: false,
-    ArrowDown: false,
-    ArrowLeft: false,
-    ArrowRight: false,
-    Space: false // Ateş etmek için
+// Tank Nesnesi (Fizik odaklı)
+const tank = {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    bodyAngle: 0,
+    turretAngle: 0,
+    speed: 0,
+    maxSpeed: 4,
+    accel: 0.15,
+    friction: 0.08,
+    rotateSpeed: 0.05,
+    bullets: []
 };
 
-// Fare durumu
-const mouse = {
-    x: 0,
-    y: 0,
-    clicked: false
-};
+// Girdileri Yakala
+window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+window.addEventListener('mousemove', e => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+});
 
-// --- Oyun Nesneleri (Objeler) ---
-// Oyuncu tankı
-const player = {
-    x: GAME_WIDTH / 2,
-    y: GAME_HEIGHT / 2,
-    size: 40,
-    speed: 3,
-    angle: 0, // Radyan cinsinden
-    color: 'green',
-    turretColor: 'darkgreen',
-    fireCooldown: 0, // Atış bekleme süresi
-    maxFireCooldown: 20 // Atışlar arası frame sayısı
-};
+// Ateş Etme Olayı
+window.addEventListener('mousedown', () => {
+    tank.bullets.push({
+        x: tank.x + Math.cos(tank.turretAngle) * 35,
+        y: tank.y + Math.sin(tank.turretAngle) * 35,
+        angle: tank.turretAngle,
+        speed: 12,
+        bounces: 0,
+        maxBounces: 2
+    });
+    
+    screenShake = 7; // Ateş sarsıntısı
+    spawnParticles(tank.x + Math.cos(tank.turretAngle) * 35, tank.y + Math.sin(tank.turretAngle) * 35, '#ff8800', 8);
+});
 
-const bullets = []; // Mermi dizisi
-const enemies = []; // Düşman tankları dizisi
-const explosions = []; // Patlama efektleri
-
-// --- Event Listeners (Olay Dinleyicileri) ---
-window.addEventListener('keydown', (e) => {
-    if (keys.hasOwnProperty(e.code)) {
-        keys[e.code] = true;
+// Parçacık Sistemi (Patlama efektleri için)
+function spawnParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            x: x,
+            y: y,
+            vx: (Math.random() - 0.5) * 8,
+            vy: (Math.random() - 0.5) * 8,
+            life: 1.0,
+            color: color
+        });
     }
-});
-
-window.addEventListener('keyup', (e) => {
-    if (keys.hasOwnProperty(e.code)) {
-        keys[e.code] = false;
-    }
-});
-
-canvas.addEventListener('mousemove', (e) => {
-    // Canvas'ın sayfadaki konumunu hesaba kat
-    const rect = canvas.getBoundingClientRect();
-    mouse.x = e.clientX - rect.left;
-    mouse.y = e.clientY - rect.top;
-});
-
-canvas.addEventListener('mousedown', (e) => {
-    if (e.button === 0) { // Sol tık
-        mouse.clicked = true;
-    }
-});
-
-canvas.addEventListener('mouseup', (e) => {
-    if (e.button === 0) {
-        mouse.clicked = false;
-    }
-});
-
-startGameBtn.addEventListener('click', () => {
-    if (!gameRunning) {
-        resetGame(); // Oyunu sıfırla
-        startGameBtn.style.display = 'none'; // Butonu gizle
-        gameRunning = true;
-        gameLoop(); // Oyun döngüsünü başlat
-    }
-});
-
-// --- Yardımcı Fonksiyonlar ---
-function distance(x1, y1, x2, y2) {
-    return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 }
 
-function getRandomInt(min, max) {
-    min = Math.ceil(min);
-    max = Math.floor(max);
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+function update() {
+    // 1. Tank Hareket ve Sürtünme
+    if (keys['w']) tank.speed = Math.min(tank.speed + tank.accel, tank.maxSpeed);
+    else if (keys['s']) tank.speed = Math.max(tank.speed - tank.accel, -tank.maxSpeed / 2);
+    else {
+        tank.speed *= (1 - tank.friction);
+        if (Math.abs(tank.speed) < 0.1) tank.speed = 0;
+    }
+
+    if (keys['a']) tank.bodyAngle -= tank.rotateSpeed;
+    if (keys['d']) tank.bodyAngle += tank.rotateSpeed;
+
+    tank.x += Math.cos(tank.bodyAngle) * tank.speed;
+    tank.y += Math.sin(tank.bodyAngle) * tank.speed;
+
+    // 2. Kule Dönüşü (Mouse takibi)
+    tank.turretAngle = Math.atan2(mouse.y - tank.y, mouse.x - tank.x);
+
+    // 3. Mermi Fiziği ve Sekme
+    tank.bullets.forEach((b, index) => {
+        b.x += Math.cos(b.angle) * b.speed;
+        b.y += Math.sin(b.angle) * b.speed;
+
+        // Duvarlardan sekme
+        if (b.x < 0 || b.x > canvas.width) {
+            b.angle = Math.PI - b.angle;
+            b.bounces++;
+            spawnParticles(b.x, b.y, '#fff', 5);
+        }
+        if (b.y < 0 || b.y > canvas.height) {
+            b.angle = -b.angle;
+            b.bounces++;
+            spawnParticles(b.x, b.y, '#fff', 5);
+        }
+
+        if (b.bounces > b.maxBounces) {
+            spawnParticles(b.x, b.y, '#ff4400', 12);
+            tank.bullets.splice(index, 1);
+        }
+    });
+
+    // 4. Parçacık Ömrü
+    particles.forEach((p, i) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.02;
+        if (p.life <= 0) particles.splice(i, 1);
+    });
+
+    if (screenShake > 0) screenShake *= 0.9;
+    bulletCounter.innerText = tank.bullets.length;
 }
 
-// --- Oyun Döngüsü ve Başlangıç ---
-function resetGame() {
-    score = 0;
-    playerHealth = 100;
-    player.x = GAME_WIDTH / 2;
-    player.y = GAME_HEIGHT / 2;
-    player.angle = 0;
-    player.fireCooldown = 0;
-    bullets.length = 0; // Diziyi sıfırla
-    enemies.length = 0; // Diziyi sıfırla
-    explosions.length = 0; // Diziyi sıfırla
-    playerHealthDisplay.textContent = `Can: ${playerHealth}`;
-    scoreDisplay.textContent = `Skor: ${score}`;
-    spawnEnemy(); // İlk düşmanı oluştur
+function draw() {
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    // Ekran Sallanması Uygula
+    if (screenShake > 0.5) {
+        ctx.translate(Math.random() * screenShake, Math.random() * screenShake);
+    }
+
+    // Partikülleri Çiz
+    particles.forEach(p => {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    // Mermileri Çiz
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#ffff00';
+    tank.bullets.forEach(b => {
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    // Tank Gövdesi
+    ctx.save();
+    ctx.translate(tank.x, tank.y);
+    ctx.rotate(tank.bodyAngle);
+    ctx.fillStyle = '#4a5d23'; // Yeşil
+    ctx.fillRect(-25, -20, 50, 40);
+    ctx.fillStyle = '#333'; // Paletler
+    ctx.fillRect(-28, -22, 56, 8);
+    ctx.fillRect(-28, 14, 56, 8);
+    ctx.restore();
+
+    // Tank Kulesi (Bağımsız)
+    ctx.save();
+    ctx.translate(tank.x, tank.y);
+    ctx.rotate(tank.turretAngle);
+    ctx.fillStyle = '#5d752d';
+    ctx.fillRect(-12, -12, 24, 24);
+    ctx.fillStyle = '#111';
+    ctx.fillRect(12, -4, 28, 8); // Namlu
+    ctx.restore();
+
+    ctx.restore();
 }
+
+function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
