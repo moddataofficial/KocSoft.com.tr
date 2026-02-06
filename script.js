@@ -8,26 +8,17 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 let score = 0;
-let level = 1;
+let lastLevelScore = 0;
 let gameOver = false;
 let isPaused = false;
 let particles = [];
 let enemies = [];
-let walls = [];
 const keys = {};
 const mouse = { x: 0, y: 0 };
 
-// --- DUVAR SİSTEMİ ---
-function createMap() {
-    for(let i=0; i<8; i++) {
-        walls.push({
-            x: Math.random() * (canvas.width - 100) + 50,
-            y: Math.random() * (canvas.height - 100) + 50,
-            w: 60, h: 60, hp: 100
-        });
-    }
-}
-createMap();
+window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
 
 // --- TANK SINIFI ---
 class Tank {
@@ -38,26 +29,51 @@ class Tank {
         this.bodyAngle = 0;
         this.turretAngle = 0;
         this.speed = 0;
-        this.maxSpeed = isPlayer ? 4 : 2;
+        this.maxSpeed = isPlayer ? 3.5 : 2;
+        this.accel = 0.1;
         this.hp = 100;
         this.bullets = [];
+        this.shotMode = 'single'; // 'single' veya 'triple'
         this.lastShot = 0;
-        this.shotMode = 1; // 1: Tekli, 3: Üçlü Atış
+    }
+
+    update() {
+        if (this.isPlayer) {
+            if (keys['w']) this.speed = Math.min(this.speed + this.accel, this.maxSpeed);
+            else if (keys['s']) this.speed = Math.max(this.speed - this.accel, -this.maxSpeed / 2);
+            else this.speed *= 0.92;
+
+            if (keys['a']) this.bodyAngle -= 0.05;
+            if (keys['d']) this.bodyAngle += 0.05;
+            this.turretAngle = Math.atan2(mouse.y - this.y, mouse.x - this.x);
+        } else {
+            // Basit Düşman Takibi
+            let angleToPlayer = Math.atan2(player.y - this.y, player.x - this.x);
+            this.bodyAngle = angleToPlayer;
+            this.turretAngle = angleToPlayer;
+            if (Math.hypot(player.x - this.x, player.y - this.y) > 200) {
+                this.x += Math.cos(this.bodyAngle) * this.speed;
+                this.y += Math.sin(this.bodyAngle) * this.speed;
+            }
+        }
+        if(this.isPlayer) {
+            this.x += Math.cos(this.bodyAngle) * this.speed;
+            this.y += Math.sin(this.bodyAngle) * this.speed;
+        }
     }
 
     draw() {
         ctx.save();
         ctx.translate(this.x, this.y);
-        // Gölge ve Gövde (Önceki çizim kodlarınla aynı, daha temiz görünüm)
+        // Gövde
         ctx.save();
         ctx.rotate(this.bodyAngle);
         ctx.fillStyle = this.color;
         ctx.fillRect(-20, -15, 40, 30);
-        ctx.fillStyle = "#222";
-        ctx.fillRect(-22, -18, 44, 6);
-        ctx.fillRect(-22, 12, 44, 6);
+        ctx.fillStyle = "#333";
+        ctx.fillRect(-22, -18, 44, 6); ctx.fillRect(-22, 12, 44, 6);
         ctx.restore();
-
+        // Kule
         ctx.rotate(this.turretAngle);
         ctx.fillStyle = this.color;
         ctx.fillRect(-12, -12, 24, 24);
@@ -69,19 +85,34 @@ class Tank {
 
 const player = new Tank(canvas.width / 2, canvas.height / 2, "#4a5d23", true);
 
-// --- GELİŞTİRME FONKSİYONU ---
-window.upgrade = function(type) {
-    if(type === 'multi') player.shotMode = 3;
-    if(type === 'speed') player.maxSpeed += 2;
-    if(type === 'armor') player.hp = 100;
+// --- GELİŞTİRME SİSTEMİ (TIKLANINCA ÇALIŞAN KISIM) ---
+window.applyUpgrade = function(type) {
+    if (type === 'multi') {
+        player.shotMode = 'triple';
+    } else if (type === 'speed') {
+        player.maxSpeed += 2.5;
+        player.accel += 0.1;
+    } else if (type === 'armor') {
+        player.hp = 100;
+        hpBar.style.width = "100%";
+    }
     
     isPaused = false;
     upgradeMenu.classList.add('hidden');
+    lastLevelScore = score; // Bir sonraki seviye için sınırı güncelle
 };
 
-function shoot(t) {
-    const angles = t.shotMode === 3 ? [-0.2, 0, 0.2] : [0];
-    
+window.addEventListener('mousedown', () => {
+    if (isPaused || gameOver) return;
+    const now = Date.now();
+    if (now - player.lastShot > 400) {
+        fireBullets(player);
+        player.lastShot = now;
+    }
+});
+
+function fireBullets(t) {
+    const angles = t.shotMode === 'triple' ? [-0.2, 0, 0.2] : [0];
     angles.forEach(offset => {
         t.bullets.push({
             x: t.x + Math.cos(t.turretAngle) * 35,
@@ -92,48 +123,61 @@ function shoot(t) {
     });
 }
 
-// --- ÇARPIŞMA KONTROLÜ ---
-function checkWallCollision(obj, nextX, nextY) {
-    for(let wall of walls) {
-        if(nextX > wall.x && nextX < wall.x + wall.w && nextY > wall.y && nextY < wall.y + wall.h) {
-            return true;
-        }
+function spawnEnemy() {
+    if (enemies.length < 3 + Math.floor(score/50)) {
+        enemies.push(new Tank(Math.random()*canvas.width, -50, "#7a2323"));
     }
-    return false;
 }
 
-function updateGame() {
-    if (gameOver || isPaused) return;
-
-    // Oyuncu Hareketi ve Duvar Kontrolü
-    let nextX = player.x + Math.cos(player.bodyAngle) * player.speed;
-    let nextY = player.y + Math.sin(player.bodyAngle) * player.speed;
-    
-    if(!checkWallCollision(player, nextX, nextY)) {
-        player.x = nextX;
-        player.y = nextY;
-    }
-    
-    // Skor ve Seviye Atlama
-    if(score >= level * 50) {
-        level++;
-        isPaused = true;
-        upgradeMenu.classList.remove('hidden');
+function loop() {
+    if (isPaused || gameOver) {
+        requestAnimationFrame(loop);
+        return;
     }
 
-    // Mermi ve Duvar Etkileşimi
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    player.update();
+    player.draw();
+
+    spawnEnemy();
+
+    // Mermi Kontrolleri
     player.bullets.forEach((b, bIdx) => {
-        walls.forEach((wall, wIdx) => {
-            if(b.x > wall.x && b.x < wall.x + wall.w && b.y > wall.y && b.y < wall.y + wall.h) {
-                wall.hp -= 10;
+        b.x += Math.cos(b.angle) * b.speed;
+        b.y += Math.sin(b.angle) * b.speed;
+        ctx.fillStyle = "yellow";
+        ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI*2); ctx.fill();
+
+        enemies.forEach((en, eIdx) => {
+            if (Math.hypot(b.x - en.x, b.y - en.y) < 25) {
+                en.hp -= 50;
                 player.bullets.splice(bIdx, 1);
-                if(wall.hp <= 0) walls.splice(wIdx, 1);
+                if (en.hp <= 0) {
+                    enemies.splice(eIdx, 1);
+                    score += 25;
+                    scoreText.innerText = score;
+                    // Her 100 puanda geliştirme menüsü açılır
+                    if (score - lastLevelScore >= 100) {
+                        isPaused = true;
+                        upgradeMenu.classList.remove('hidden');
+                    }
+                }
             }
         });
     });
 
-    // (Diğer update ve draw fonksiyonlarını öncekiyle birleştir)
-    // ... Düşman takibi ve çizim döngüsü ...
+    enemies.forEach((en, eIdx) => {
+        en.update();
+        en.draw();
+        // Düşman oyuncuya çarparsa
+        if (Math.hypot(en.x - player.x, en.y - player.y) < 40) {
+            player.hp -= 0.5;
+            hpBar.style.width = player.hp + "%";
+            if (player.hp <= 0) gameOver = true;
+        }
+    });
+
+    requestAnimationFrame(loop);
 }
 
-// (Önceki kodun geri kalanını buraya ekleyerek çalıştırabilirsin)
+loop();
