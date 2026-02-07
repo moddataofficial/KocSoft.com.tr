@@ -1,35 +1,45 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <title>Iron Steel: Tank Evolution</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div id="game-ui">
-        <div class="stat-box">
-            <div class="label">ZIRH</div>
-            <div class="bar-container"><div id="hp-bar" class="bar"></div></div>
-            <div id="level-text" style="font-size: 12px; margin-top: 5px;">SEVİYE: 1</div>
-        </div>
-        <div id="upgrade-menu" class="hidden">
-            <h3>GELİŞTİRME SEÇ!</h3>
-            <button onclick="upgrade('multi')">ÇOKLU ATIŞ</button>
-            <button onclick="upgrade('speed')">HIZLI MOTOR</button>
-            <button onclick="upgrade('armor')">TAMİR ET</button>
-        </div>
-        <div class="stat-box">
-            <div class="label">SKOR</div>
-            <div id="score-text">000</div>
-        </div>
-    </div>
-    
-    <div id="game-over" class="hidden">
-        <h1>ARAÇ İMHA EDİLDİ</h1>
-        <button onclick="location.reload()">YENİDEN BAŞLAT</button>
-    </div>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEON RUNNER X</title>
 
-    <canvas id="gameCanvas"></canvas>
-    <script src="script.js"></script>
-</body>
-</html>
+<style>
+html,body{
+    margin:0;
+    padding:0;
+    background:#050510;
+    overflow:hidden;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    color:white;
+}
+
+canvas{
+    display:block;
+}
+
+#ui{
+    position:fixed;
+    top:20px;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:20px;
+    letter-spacing:2px;
+    text-shadow:0 0 15px #00ffff;
+}
+
+#gameOver{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.85);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    font-size:28px;
+    display:none;
+}
+
+button{
+    ma
